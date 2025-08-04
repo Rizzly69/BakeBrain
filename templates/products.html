@@ -1,0 +1,376 @@
+{% extends "base.html" %}
+
+{% block title %}Products - Smart Bakery Manager{% endblock %}
+
+{% block content %}
+<div class="products-page">
+    <div class="page-header">
+        <h1 class="header-title">
+            <i data-feather="package"></i>
+            Products Management
+        </h1>
+        {% if current_user.role.name in ['admin', 'manager'] %}
+        <button class="btn btn-primary" onclick="showAddProductModal()">
+            <i data-feather="plus"></i>
+            Add Product
+        </button>
+        {% endif %}
+    </div>
+    
+    <!-- Filters -->
+    <div class="card" style="margin-bottom: 20px;">
+        <div class="card-body" style="padding: 15px;">
+            <div style="display: grid; grid-template-columns: 1fr 1fr 1fr auto; gap: 15px; align-items: end;">
+                <div>
+                    <label class="form-label">Category</label>
+                    <select class="form-control" id="categoryFilter">
+                        <option value="">All Categories</option>
+                        <option value="breads">Breads</option>
+                        <option value="pastries">Pastries</option>
+                        <option value="cakes">Cakes</option>
+                        <option value="cookies">Cookies</option>
+                        <option value="beverages">Beverages</option>
+                    </select>
+                </div>
+                <div>
+                    <label class="form-label">Status</label>
+                    <select class="form-control" id="statusFilter">
+                        <option value="">All Status</option>
+                        <option value="active">Active</option>
+                        <option value="inactive">Inactive</option>
+                    </select>
+                </div>
+                <div>
+                    <label class="form-label">Search</label>
+                    <input type="text" class="form-control" id="searchFilter" placeholder="Search products...">
+                </div>
+                <button class="btn btn-secondary" onclick="resetFilters()">
+                    <i data-feather="x"></i>
+                    Reset
+                </button>
+            </div>
+        </div>
+    </div>
+    
+    <!-- Products Grid -->
+    <div class="products-grid">
+        <!-- Sample Products -->
+        <div class="product-card" data-category="breads" data-status="active">
+            <div class="product-image">
+                <div class="placeholder-image">
+                    <i data-feather="package" style="width: 40px; height: 40px; opacity: 0.5;"></i>
+                </div>
+                <div class="product-badge badge-success">Active</div>
+            </div>
+            <div class="product-info">
+                <h3 class="product-name">Classic White Bread</h3>
+                <p class="product-category">Breads</p>
+                <div class="product-price">$4.50</div>
+                <div class="product-stock">
+                    <span class="stock-level stock-good">In Stock (45)</span>
+                </div>
+                <div class="product-actions">
+                    <button class="btn btn-sm btn-secondary" onclick="editProduct(1)">
+                        <i data-feather="edit-2"></i>
+                    </button>
+                    <button class="btn btn-sm btn-primary" onclick="viewProduct(1)">
+                        <i data-feather="eye"></i>
+                    </button>
+                </div>
+            </div>
+        </div>
+        
+        <div class="product-card" data-category="pastries" data-status="active">
+            <div class="product-image">
+                <div class="placeholder-image">
+                    <i data-feather="package" style="width: 40px; height: 40px; opacity: 0.5;"></i>
+                </div>
+                <div class="product-badge badge-success">Active</div>
+            </div>
+            <div class="product-info">
+                <h3 class="product-name">Chocolate Croissant</h3>
+                <p class="product-category">Pastries</p>
+                <div class="product-price">$3.25</div>
+                <div class="product-stock">
+                    <span class="stock-level stock-low">Low Stock (8)</span>
+                </div>
+                <div class="product-actions">
+                    <button class="btn btn-sm btn-secondary" onclick="editProduct(2)">
+                        <i data-feather="edit-2"></i>
+                    </button>
+                    <button class="btn btn-sm btn-primary" onclick="viewProduct(2)">
+                        <i data-feather="eye"></i>
+                    </button>
+                </div>
+            </div>
+        </div>
+        
+        <div class="product-card" data-category="cakes" data-status="active">
+            <div class="product-image">
+                <div class="placeholder-image">
+                    <i data-feather="package" style="width: 40px; height: 40px; opacity: 0.5;"></i>
+                </div>
+                <div class="product-badge badge-success">Active</div>
+            </div>
+            <div class="product-info">
+                <h3 class="product-name">Birthday Cake (8")</h3>
+                <p class="product-category">Cakes</p>
+                <div class="product-price">$24.99</div>
+                <div class="product-stock">
+                    <span class="stock-level stock-out">Out of Stock</span>
+                </div>
+                <div class="product-actions">
+                    <button class="btn btn-sm btn-secondary" onclick="editProduct(3)">
+                        <i data-feather="edit-2"></i>
+                    </button>
+                    <button class="btn btn-sm btn-primary" onclick="viewProduct(3)">
+                        <i data-feather="eye"></i>
+                    </button>
+                </div>
+            </div>
+        </div>
+        
+        <div class="product-card" data-category="cookies" data-status="active">
+            <div class="product-image">
+                <div class="placeholder-image">
+                    <i data-feather="package" style="width: 40px; height: 40px; opacity: 0.5;"></i>
+                </div>
+                <div class="product-badge badge-success">Active</div>
+            </div>
+            <div class="product-info">
+                <h3 class="product-name">Chocolate Chip Cookies</h3>
+                <p class="product-category">Cookies</p>
+                <div class="product-price">$2.75</div>
+                <div class="product-stock">
+                    <span class="stock-level stock-good">In Stock (32)</span>
+                </div>
+                <div class="product-actions">
+                    <button class="btn btn-sm btn-secondary" onclick="editProduct(4)">
+                        <i data-feather="edit-2"></i>
+                    </button>
+                    <button class="btn btn-sm btn-primary" onclick="viewProduct(4)">
+                        <i data-feather="eye"></i>
+                    </button>
+                </div>
+            </div>
+        </div>
+        
+        <div class="product-card" data-category="beverages" data-status="active">
+            <div class="product-image">
+                <div class="placeholder-image">
+                    <i data-feather="package" style="width: 40px; height: 40px; opacity: 0.5;"></i>
+                </div>
+                <div class="product-badge badge-success">Active</div>
+            </div>
+            <div class="product-info">
+                <h3 class="product-name">Fresh Coffee</h3>
+                <p class="product-category">Beverages</p>
+                <div class="product-price">$2.50</div>
+                <div class="product-stock">
+                    <span class="stock-level stock-good">In Stock (120)</span>
+                </div>
+                <div class="product-actions">
+                    <button class="btn btn-sm btn-secondary" onclick="editProduct(5)">
+                        <i data-feather="edit-2"></i>
+                    </button>
+                    <button class="btn btn-sm btn-primary" onclick="viewProduct(5)">
+                        <i data-feather="eye"></i>
+                    </button>
+                </div>
+            </div>
+        </div>
+        
+        <div class="product-card" data-category="pastries" data-status="active">
+            <div class="product-image">
+                <div class="placeholder-image">
+                    <i data-feather="package" style="width: 40px; height: 40px; opacity: 0.5;"></i>
+                </div>
+                <div class="product-badge badge-success">Active</div>
+            </div>
+            <div class="product-info">
+                <h3 class="product-name">Blueberry Muffin</h3>
+                <p class="product-category">Pastries</p>
+                <div class="product-price">$3.00</div>
+                <div class="product-stock">
+                    <span class="stock-level stock-good">In Stock (25)</span>
+                </div>
+                <div class="product-actions">
+                    <button class="btn btn-sm btn-secondary" onclick="editProduct(6)">
+                        <i data-feather="edit-2"></i>
+                    </button>
+                    <button class="btn btn-sm btn-primary" onclick="viewProduct(6)">
+                        <i data-feather="eye"></i>
+                    </button>
+                </div>
+            </div>
+        </div>
+    </div>
+</div>
+
+<style>
+.products-grid {
+    display: grid;
+    grid-template-columns: repeat(auto-fill, minmax(300px, 1fr));
+    gap: 20px;
+    margin-top: 20px;
+}
+
+.product-card {
+    background: var(--bg-card);
+    border-radius: 12px;
+    border: 1px solid var(--border-color);
+    transition: all 0.2s ease;
+    overflow: hidden;
+}
+
+.product-card:hover {
+    transform: translateY(-2px);
+    box-shadow: 0 4px 20px rgba(0, 0, 0, 0.1);
+    border-color: var(--accent-blue);
+}
+
+.product-image {
+    position: relative;
+    height: 180px;
+    background: var(--bg-tertiary);
+    display: flex;
+    align-items: center;
+    justify-content: center;
+}
+
+.placeholder-image {
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    color: var(--text-muted);
+}
+
+.product-badge {
+    position: absolute;
+    top: 10px;
+    right: 10px;
+    padding: 4px 8px;
+    font-size: 12px;
+    border-radius: 6px;
+}
+
+.product-info {
+    padding: 20px;
+}
+
+.product-name {
+    font-size: 18px;
+    font-weight: 600;
+    color: var(--text-primary);
+    margin-bottom: 5px;
+}
+
+.product-category {
+    font-size: 14px;
+    color: var(--text-muted);
+    margin-bottom: 10px;
+}
+
+.product-price {
+    font-size: 20px;
+    font-weight: 700;
+    color: var(--accent-blue);
+    margin-bottom: 10px;
+}
+
+.product-stock {
+    margin-bottom: 15px;
+}
+
+.stock-level {
+    font-size: 12px;
+    font-weight: 600;
+    padding: 4px 8px;
+    border-radius: 6px;
+}
+
+.stock-good {
+    background: rgba(34, 197, 94, 0.1);
+    color: var(--success);
+}
+
+.stock-low {
+    background: rgba(245, 158, 11, 0.1);
+    color: var(--warning);
+}
+
+.stock-out {
+    background: rgba(239, 68, 68, 0.1);
+    color: var(--danger);
+}
+
+.product-actions {
+    display: flex;
+    gap: 8px;
+}
+
+.product-actions .btn {
+    flex: 1;
+}
+
+@media (max-width: 768px) {
+    .products-grid {
+        grid-template-columns: 1fr;
+    }
+    
+    .card-body > div {
+        grid-template-columns: 1fr;
+    }
+}
+</style>
+
+<script>
+function showAddProductModal() {
+    showNotification('Add product form would open here', 'info');
+}
+
+function editProduct(id) {
+    showNotification(`Edit product ${id} form would open here`, 'info');
+}
+
+function viewProduct(id) {
+    showNotification(`Product ${id} details would be shown here`, 'info');
+}
+
+function resetFilters() {
+    document.getElementById('categoryFilter').value = '';
+    document.getElementById('statusFilter').value = '';
+    document.getElementById('searchFilter').value = '';
+    filterProducts();
+}
+
+function filterProducts() {
+    const category = document.getElementById('categoryFilter').value;
+    const status = document.getElementById('statusFilter').value;
+    const search = document.getElementById('searchFilter').value.toLowerCase();
+    
+    const cards = document.querySelectorAll('.product-card');
+    
+    cards.forEach(card => {
+        const cardCategory = card.dataset.category;
+        const cardStatus = card.dataset.status;
+        const cardName = card.querySelector('.product-name').textContent.toLowerCase();
+        
+        const categoryMatch = !category || cardCategory === category;
+        const statusMatch = !status || cardStatus === status;
+        const searchMatch = !search || cardName.includes(search);
+        
+        if (categoryMatch && statusMatch && searchMatch) {
+            card.style.display = 'block';
+        } else {
+            card.style.display = 'none';
+        }
+    });
+}
+
+// Add event listeners for filters
+document.getElementById('categoryFilter').addEventListener('change', filterProducts);
+document.getElementById('statusFilter').addEventListener('change', filterProducts);
+document.getElementById('searchFilter').addEventListener('input', filterProducts);
+</script>
+{% endblock %}

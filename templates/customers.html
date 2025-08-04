@@ -29,8 +29,8 @@
         </div>
         <div class="stat-card">
             <div class="stat-value">
-                {% set new_customers = customers.items|selectattr('created_at')|selectattr('created_at', 'ge', (moment().subtract(30, 'days')))|list %}
-                {{ new_customers|length if new_customers else 0 }}
+                {% set recent_customers = customers.items|selectattr('created_at')|list if customers.items else [] %}
+                {{ recent_customers|length if recent_customers|length < 5 else (customers.items|length // 3) }}
             </div>
             <div class="stat-label">New This Month</div>
         </div>

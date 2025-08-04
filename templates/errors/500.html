@@ -1,0 +1,77 @@
+{% extends "base.html" %}
+
+{% block title %}Server Error - Smart Bakery Manager{% endblock %}
+
+{% block content %}
+<div class="error-page">
+    <div class="error-container">
+        <div class="error-icon">
+            <i data-feather="alert-triangle" style="width: 120px; height: 120px; color: var(--warning);"></i>
+        </div>
+        
+        <h1 class="error-title">500</h1>
+        <h2 class="error-subtitle">Internal Server Error</h2>
+        <p class="error-message">
+            Something went wrong on our end. We're working to fix it.
+        </p>
+        
+        <div class="error-actions">
+            <a href="{{ url_for('dashboard') }}" class="btn btn-primary">
+                <i data-feather="home"></i>
+                Go to Dashboard
+            </a>
+            <button onclick="location.reload()" class="btn btn-secondary">
+                <i data-feather="refresh-cw"></i>
+                Try Again
+            </button>
+        </div>
+    </div>
+</div>
+
+<style>
+.error-page {
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    min-height: 70vh;
+    text-align: center;
+}
+
+.error-container {
+    max-width: 500px;
+    padding: 40px;
+}
+
+.error-icon {
+    margin-bottom: 30px;
+    opacity: 0.7;
+}
+
+.error-title {
+    font-size: 5rem;
+    font-weight: 700;
+    color: var(--warning);
+    margin-bottom: 10px;
+    text-shadow: 0 0 10px rgba(245, 158, 11, 0.3);
+}
+
+.error-subtitle {
+    font-size: 1.5rem;
+    color: var(--text-primary);
+    margin-bottom: 15px;
+}
+
+.error-message {
+    color: var(--text-muted);
+    margin-bottom: 30px;
+    line-height: 1.6;
+}
+
+.error-actions {
+    display: flex;
+    gap: 15px;
+    justify-content: center;
+    flex-wrap: wrap;
+}
+</style>
+{% endblock %}

@@ -79,7 +79,7 @@
                         <th>Amount</th>
                         <th>Status</th>
                         <th>Created</th>
-                        {% if current_user.role.name == 'catering' or orders.items[0].order_type.value == 'catering' %}
+                        {% if current_user.role.name == 'catering' or (orders.items and orders.items[0].order_type.value == 'catering') %}
                         <th>Event Date</th>
                         {% endif %}
                         <th>Actions</th>

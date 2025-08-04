@@ -2,33 +2,37 @@
 
 :root {
     /* Dark theme colors */
-    --bg-primary: #0a0a0a;
-    --bg-secondary: #1a1a1a;
-    --bg-tertiary: #2a2a2a;
-    --bg-card: #1e1e1e;
+    --bg-primary: #1a1a1a;
+    --bg-secondary: #2a2a2a;
+    --bg-tertiary: #3a3a3a;
+    --bg-card: #2d2d2d;
     
-    /* Neon accent colors */
-    --neon-cyan: #00ffff;
-    --neon-pink: #ff00ff;
-    --neon-green: #00ff00;
-    --neon-yellow: #ffff00;
-    --neon-purple: #8a2be2;
+    /* Softer accent colors */
+    --accent-blue: #3b82f6;
+    --accent-purple: #8b5cf6;
+    --accent-green: #10b981;
+    --accent-orange: #f59e0b;
+    --accent-pink: #ec4899;
     
     /* Text colors */
-    --text-primary: #ffffff;
-    --text-secondary: #b0b0b0;
-    --text-muted: #666666;
+    --text-primary: #f9fafb;
+    --text-secondary: #d1d5db;
+    --text-muted: #9ca3af;
     
     /* Status colors */
-    --success: #00ff88;
-    --warning: #ffaa00;
-    --error: #ff4444;
-    --info: #00aaff;
+    --success: #10b981;
+    --warning: #f59e0b;
+    --danger: #ef4444;
+    --info: #3b82f6;
     
-    /* Shadows and glows */
-    --glow-cyan: 0 0 20px rgba(0, 255, 255, 0.5);
-    --glow-pink: 0 0 20px rgba(255, 0, 255, 0.5);
-    --shadow-dark: 0 4px 20px rgba(0, 0, 0, 0.5);
+    /* Border colors */
+    --border-color: #374151;
+    --border-light: #4b5563;
+    
+    /* Subtle shadows */
+    --shadow-sm: 0 1px 2px rgba(0, 0, 0, 0.05);
+    --shadow-md: 0 4px 6px rgba(0, 0, 0, 0.1);
+    --shadow-lg: 0 10px 15px rgba(0, 0, 0, 0.1);
 }
 
 * {
@@ -61,8 +65,8 @@ body {
 .sidebar {
     width: 260px;
     background: var(--bg-card);
-    border-right: 1px solid var(--neon-cyan);
-    box-shadow: var(--glow-cyan);
+    border-right: 1px solid var(--border-color);
+    box-shadow: var(--shadow-lg);
     position: fixed;
     height: 100vh;
     overflow-y: auto;
@@ -71,15 +75,14 @@ body {
 
 .sidebar-header {
     padding: 20px;
-    border-bottom: 1px solid var(--bg-tertiary);
+    border-bottom: 1px solid var(--border-color);
     text-align: center;
 }
 
 .logo {
     font-size: 24px;
     font-weight: bold;
-    color: var(--neon-cyan);
-    text-shadow: var(--glow-cyan);
+    color: var(--accent-blue);
 }
 
 .nav-menu {
@@ -102,16 +105,15 @@ body {
 }
 
 .nav-link:hover {
-    color: var(--neon-cyan);
-    background: rgba(0, 255, 255, 0.1);
-    border-left-color: var(--neon-cyan);
-    box-shadow: inset 0 0 10px rgba(0, 255, 255, 0.2);
+    color: var(--accent-blue);
+    background: rgba(59, 130, 246, 0.1);
+    border-left-color: var(--accent-blue);
 }
 
 .nav-link.active {
-    color: var(--neon-cyan);
-    background: rgba(0, 255, 255, 0.15);
-    border-left-color: var(--neon-cyan);
+    color: var(--accent-blue);
+    background: rgba(59, 130, 246, 0.15);
+    border-left-color: var(--accent-blue);
 }
 
 .nav-icon {

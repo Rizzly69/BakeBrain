@@ -56,22 +56,30 @@ with app.app_context():
     # Create roles
     admin_role = Role.query.filter_by(name='admin').first()
     if not admin_role:
-        admin_role = Role(name='admin', description='Administrator with full access')
+        admin_role = Role()
+        admin_role.name = 'admin'
+        admin_role.description = 'Administrator with full access'
         db.session.add(admin_role)
     
     manager_role = Role.query.filter_by(name='manager').first()
     if not manager_role:
-        manager_role = Role(name='manager', description='Manager with operational access')
+        manager_role = Role()
+        manager_role.name = 'manager'
+        manager_role.description = 'Manager with operational access'
         db.session.add(manager_role)
     
     staff_role = Role.query.filter_by(name='staff').first()
     if not staff_role:
-        staff_role = Role(name='staff', description='Staff with limited access')
+        staff_role = Role()
+        staff_role.name = 'staff'
+        staff_role.description = 'Staff with limited access'
         db.session.add(staff_role)
     
     customer_role = Role.query.filter_by(name='customer').first()
     if not customer_role:
-        customer_role = Role(name='customer', description='Customer with order access')
+        customer_role = Role()
+        customer_role.name = 'customer'
+        customer_role.description = 'Customer with order access'
         db.session.add(customer_role)
     
     db.session.commit()
@@ -79,14 +87,13 @@ with app.app_context():
     # Create default admin user
     admin_user = User.query.filter_by(username='admin').first()
     if not admin_user:
-        admin_user = User(
-            username='admin',
-            email='admin@bakery.com',
-            password_hash=generate_password_hash('admin123'),
-            first_name='Admin',
-            last_name='User',
-            role=admin_role,
-            is_active=True
-        )
+        admin_user = User()
+        admin_user.username = 'admin'
+        admin_user.email = 'admin@bakery.com'
+        admin_user.password_hash = generate_password_hash('admin123')
+        admin_user.first_name = 'Admin'
+        admin_user.last_name = 'User'
+        admin_user.role = admin_role
+        admin_user.is_active = True
         db.session.add(admin_user)
         db.session.commit()

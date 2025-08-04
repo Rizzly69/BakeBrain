@@ -21,9 +21,17 @@ class User(UserMixin, db.Model):
     last_name = db.Column(db.String(64), nullable=False)
     phone = db.Column(db.String(20))
     role_id = db.Column(db.Integer, db.ForeignKey('role.id'), nullable=False)
-    is_active = db.Column(db.Boolean, default=True)
+    active = db.Column(db.Boolean, default=True)
     created_at = db.Column(db.DateTime, default=datetime.utcnow)
     last_login = db.Column(db.DateTime)
+    
+    @property
+    def is_active(self):
+        return self.active
+        
+    @is_active.setter
+    def is_active(self, value):
+        self.active = value
     
     # Relationships
     orders = db.relationship('Order', backref='customer', lazy=True, foreign_keys='Order.customer_id')
