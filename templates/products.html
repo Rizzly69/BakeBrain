@@ -7,226 +7,237 @@
     <div class="page-header">
         <h1 class="header-title">
             <i data-feather="package"></i>
-            Products Management
+            Product Catalog
         </h1>
+        <div class="header-actions">
+            {% if current_user.role.name in ['admin', 'manager'] %}
+            <button class="btn btn-primary" onclick="showAddProductModal()">
+                <i data-feather="plus"></i>
+                Add Product
+            </button>
+            {% endif %}
+            <a href="{{ url_for('download_inventory_report') }}" class="btn btn-secondary">
+                <i data-feather="download"></i>
+                Inventory Report
+            </a>
+        </div>
+    </div>
+
+    <!-- Search and Filter Bar -->
+    <div class="filter-section">
+        <form method="GET" class="search-form">
+            <div class="search-group">
+                <input type="text" 
+                       name="search" 
+                       value="{{ search }}" 
+                       placeholder="Search products..." 
+                       class="form-control search-input">
+                <button type="submit" class="btn btn-primary">
+                    <i data-feather="search"></i>
+                </button>
+            </div>
+            
+            <div class="filter-group">
+                <select name="category" class="form-control" onchange="this.form.submit()">
+                    <option value="">All Categories</option>
+                    {% for category in categories %}
+                    <option value="{{ category.name }}" 
+                            {{ 'selected' if category.name == current_category else '' }}>
+                        {{ category.name }}
+                    </option>
+                    {% endfor %}
+                </select>
+            </div>
+
+            {% if search or current_category %}
+            <a href="{{ url_for('products') }}" class="btn btn-outline">Clear Filters</a>
+            {% endif %}
+        </form>
+    </div>
+
+    <!-- Products Grid -->
+    {% if products.items %}
+    <div class="products-grid">
+        {% for product in products.items %}
+        <div class="product-card" data-product-id="{{ product.id }}">
+            <div class="product-image">
+                <div class="product-placeholder">
+                    <i data-feather="package" style="width: 48px; height: 48px; opacity: 0.3;"></i>
+                </div>
+                {% if product.category %}
+                <div class="product-category">{{ product.category.name }}</div>
+                {% endif %}
+            </div>
+            
+            <div class="product-content">
+                <h3 class="product-name">{{ product.name }}</h3>
+                
+                {% if product.description %}
+                <p class="product-description">{{ product.description }}</p>
+                {% endif %}
+                
+                <div class="product-details">
+                    <div class="price-section">
+                        <span class="product-price">${{ "%.2f"|format(product.price) }}</span>
+                        {% if product.cost and current_user.role.name in ['admin', 'manager'] %}
+                        <span class="product-cost">Cost: ${{ "%.2f"|format(product.cost) }}</span>
+                        {% endif %}
+                    </div>
+                    
+                    {% if product.inventory %}
+                    <div class="inventory-section">
+                        <div class="stock-level {{ 'low-stock' if product.inventory.is_low_stock() else 'in-stock' }}">
+                            <i data-feather="package"></i>
+                            {{ product.inventory.quantity }} in stock
+                        </div>
+                        {% if product.inventory.is_low_stock() %}
+                        <div class="low-stock-warning">
+                            <i data-feather="alert-triangle"></i>
+                            Low Stock!
+                        </div>
+                        {% endif %}
+                    </div>
+                    {% endif %}
+                </div>
+                
+                <div class="product-actions">
+                    {% if current_user.role.name in ['admin', 'manager'] %}
+                    <button class="btn btn-sm btn-primary" onclick="editProduct({{ product.id }})">
+                        <i data-feather="edit"></i>
+                        Edit
+                    </button>
+                    {% endif %}
+                    
+                    {% if current_user.role.name in ['customer'] %}
+                    <button class="btn btn-sm btn-success" onclick="addToOrder({{ product.id }})">
+                        <i data-feather="plus"></i>
+                        Add to Order
+                    </button>
+                    {% endif %}
+                    
+                    <button class="btn btn-sm btn-outline" onclick="viewProduct({{ product.id }})">
+                        <i data-feather="eye"></i>
+                        View Details
+                    </button>
+                </div>
+            </div>
+        </div>
+        {% endfor %}
+    </div>
+
+    <!-- Pagination -->
+    {% if products.pages > 1 %}
+    <div class="pagination-container">
+        <nav class="pagination">
+            {% if products.has_prev %}
+            <a href="{{ url_for('products', page=products.prev_num, search=search, category=current_category) }}" 
+               class="pagination-link">
+                <i data-feather="chevron-left"></i>
+                Previous
+            </a>
+            {% endif %}
+            
+            <div class="pagination-info">
+                Page {{ products.page }} of {{ products.pages }}
+                ({{ products.total }} products)
+            </div>
+            
+            {% if products.has_next %}
+            <a href="{{ url_for('products', page=products.next_num, search=search, category=current_category) }}" 
+               class="pagination-link">
+                Next
+                <i data-feather="chevron-right"></i>
+            </a>
+            {% endif %}
+        </nav>
+    </div>
+    {% endif %}
+
+    {% else %}
+    <!-- Empty State -->
+    <div class="empty-state">
+        <div class="empty-icon">
+            <i data-feather="package" style="width: 64px; height: 64px; opacity: 0.3;"></i>
+        </div>
+        <h3>No Products Found</h3>
+        {% if search or current_category %}
+        <p>No products match your current filters.</p>
+        <a href="{{ url_for('products') }}" class="btn btn-primary">Clear Filters</a>
+        {% else %}
+        <p>Start building your product catalog.</p>
         {% if current_user.role.name in ['admin', 'manager'] %}
         <button class="btn btn-primary" onclick="showAddProductModal()">
             <i data-feather="plus"></i>
-            Add Product
+            Add First Product
         </button>
         {% endif %}
+        {% endif %}
     </div>
-    
-    <!-- Filters -->
-    <div class="card" style="margin-bottom: 20px;">
-        <div class="card-body" style="padding: 15px;">
-            <div style="display: grid; grid-template-columns: 1fr 1fr 1fr auto; gap: 15px; align-items: end;">
-                <div>
-                    <label class="form-label">Category</label>
-                    <select class="form-control" id="categoryFilter">
-                        <option value="">All Categories</option>
-                        <option value="breads">Breads</option>
-                        <option value="pastries">Pastries</option>
-                        <option value="cakes">Cakes</option>
-                        <option value="cookies">Cookies</option>
-                        <option value="beverages">Beverages</option>
-                    </select>
-                </div>
-                <div>
-                    <label class="form-label">Status</label>
-                    <select class="form-control" id="statusFilter">
-                        <option value="">All Status</option>
-                        <option value="active">Active</option>
-                        <option value="inactive">Inactive</option>
-                    </select>
-                </div>
-                <div>
-                    <label class="form-label">Search</label>
-                    <input type="text" class="form-control" id="searchFilter" placeholder="Search products...">
-                </div>
-                <button class="btn btn-secondary" onclick="resetFilters()">
-                    <i data-feather="x"></i>
-                    Reset
-                </button>
-            </div>
+    {% endif %}
+</div>
+
+<!-- Product Detail Modal -->
+<div id="productModal" class="modal">
+    <div class="modal-content">
+        <div class="modal-header">
+            <h2 id="modalTitle">Product Details</h2>
+            <button class="modal-close" onclick="closeModal()">&times;</button>
         </div>
-    </div>
-    
-    <!-- Products Grid -->
-    <div class="products-grid">
-        <!-- Sample Products -->
-        <div class="product-card" data-category="breads" data-status="active">
-            <div class="product-image">
-                <div class="placeholder-image">
-                    <i data-feather="package" style="width: 40px; height: 40px; opacity: 0.5;"></i>
-                </div>
-                <div class="product-badge badge-success">Active</div>
-            </div>
-            <div class="product-info">
-                <h3 class="product-name">Classic White Bread</h3>
-                <p class="product-category">Breads</p>
-                <div class="product-price">$4.50</div>
-                <div class="product-stock">
-                    <span class="stock-level stock-good">In Stock (45)</span>
-                </div>
-                <div class="product-actions">
-                    <button class="btn btn-sm btn-secondary" onclick="editProduct(1)">
-                        <i data-feather="edit-2"></i>
-                    </button>
-                    <button class="btn btn-sm btn-primary" onclick="viewProduct(1)">
-                        <i data-feather="eye"></i>
-                    </button>
-                </div>
-            </div>
-        </div>
-        
-        <div class="product-card" data-category="pastries" data-status="active">
-            <div class="product-image">
-                <div class="placeholder-image">
-                    <i data-feather="package" style="width: 40px; height: 40px; opacity: 0.5;"></i>
-                </div>
-                <div class="product-badge badge-success">Active</div>
-            </div>
-            <div class="product-info">
-                <h3 class="product-name">Chocolate Croissant</h3>
-                <p class="product-category">Pastries</p>
-                <div class="product-price">$3.25</div>
-                <div class="product-stock">
-                    <span class="stock-level stock-low">Low Stock (8)</span>
-                </div>
-                <div class="product-actions">
-                    <button class="btn btn-sm btn-secondary" onclick="editProduct(2)">
-                        <i data-feather="edit-2"></i>
-                    </button>
-                    <button class="btn btn-sm btn-primary" onclick="viewProduct(2)">
-                        <i data-feather="eye"></i>
-                    </button>
-                </div>
-            </div>
-        </div>
-        
-        <div class="product-card" data-category="cakes" data-status="active">
-            <div class="product-image">
-                <div class="placeholder-image">
-                    <i data-feather="package" style="width: 40px; height: 40px; opacity: 0.5;"></i>
-                </div>
-                <div class="product-badge badge-success">Active</div>
-            </div>
-            <div class="product-info">
-                <h3 class="product-name">Birthday Cake (8")</h3>
-                <p class="product-category">Cakes</p>
-                <div class="product-price">$24.99</div>
-                <div class="product-stock">
-                    <span class="stock-level stock-out">Out of Stock</span>
-                </div>
-                <div class="product-actions">
-                    <button class="btn btn-sm btn-secondary" onclick="editProduct(3)">
-                        <i data-feather="edit-2"></i>
-                    </button>
-                    <button class="btn btn-sm btn-primary" onclick="viewProduct(3)">
-                        <i data-feather="eye"></i>
-                    </button>
-                </div>
-            </div>
-        </div>
-        
-        <div class="product-card" data-category="cookies" data-status="active">
-            <div class="product-image">
-                <div class="placeholder-image">
-                    <i data-feather="package" style="width: 40px; height: 40px; opacity: 0.5;"></i>
-                </div>
-                <div class="product-badge badge-success">Active</div>
-            </div>
-            <div class="product-info">
-                <h3 class="product-name">Chocolate Chip Cookies</h3>
-                <p class="product-category">Cookies</p>
-                <div class="product-price">$2.75</div>
-                <div class="product-stock">
-                    <span class="stock-level stock-good">In Stock (32)</span>
-                </div>
-                <div class="product-actions">
-                    <button class="btn btn-sm btn-secondary" onclick="editProduct(4)">
-                        <i data-feather="edit-2"></i>
-                    </button>
-                    <button class="btn btn-sm btn-primary" onclick="viewProduct(4)">
-                        <i data-feather="eye"></i>
-                    </button>
-                </div>
-            </div>
-        </div>
-        
-        <div class="product-card" data-category="beverages" data-status="active">
-            <div class="product-image">
-                <div class="placeholder-image">
-                    <i data-feather="package" style="width: 40px; height: 40px; opacity: 0.5;"></i>
-                </div>
-                <div class="product-badge badge-success">Active</div>
-            </div>
-            <div class="product-info">
-                <h3 class="product-name">Fresh Coffee</h3>
-                <p class="product-category">Beverages</p>
-                <div class="product-price">$2.50</div>
-                <div class="product-stock">
-                    <span class="stock-level stock-good">In Stock (120)</span>
-                </div>
-                <div class="product-actions">
-                    <button class="btn btn-sm btn-secondary" onclick="editProduct(5)">
-                        <i data-feather="edit-2"></i>
-                    </button>
-                    <button class="btn btn-sm btn-primary" onclick="viewProduct(5)">
-                        <i data-feather="eye"></i>
-                    </button>
-                </div>
-            </div>
-        </div>
-        
-        <div class="product-card" data-category="pastries" data-status="active">
-            <div class="product-image">
-                <div class="placeholder-image">
-                    <i data-feather="package" style="width: 40px; height: 40px; opacity: 0.5;"></i>
-                </div>
-                <div class="product-badge badge-success">Active</div>
-            </div>
-            <div class="product-info">
-                <h3 class="product-name">Blueberry Muffin</h3>
-                <p class="product-category">Pastries</p>
-                <div class="product-price">$3.00</div>
-                <div class="product-stock">
-                    <span class="stock-level stock-good">In Stock (25)</span>
-                </div>
-                <div class="product-actions">
-                    <button class="btn btn-sm btn-secondary" onclick="editProduct(6)">
-                        <i data-feather="edit-2"></i>
-                    </button>
-                    <button class="btn btn-sm btn-primary" onclick="viewProduct(6)">
-                        <i data-feather="eye"></i>
-                    </button>
-                </div>
-            </div>
+        <div class="modal-body" id="modalBody">
+            <!-- Content loaded dynamically -->
         </div>
     </div>
 </div>
 
 <style>
+.filter-section {
+    background: var(--bg-card);
+    border-radius: 12px;
+    padding: 20px;
+    margin-bottom: 30px;
+    border: 1px solid var(--border-color);
+}
+
+.search-form {
+    display: flex;
+    gap: 15px;
+    align-items: center;
+    flex-wrap: wrap;
+}
+
+.search-group {
+    display: flex;
+    gap: 10px;
+    flex: 1;
+    min-width: 300px;
+}
+
+.search-input {
+    flex: 1;
+}
+
+.filter-group {
+    min-width: 200px;
+}
+
 .products-grid {
     display: grid;
-    grid-template-columns: repeat(auto-fill, minmax(300px, 1fr));
+    grid-template-columns: repeat(auto-fill, minmax(320px, 1fr));
     gap: 20px;
-    margin-top: 20px;
+    margin-bottom: 30px;
 }
 
 .product-card {
     background: var(--bg-card);
     border-radius: 12px;
+    overflow: hidden;
     border: 1px solid var(--border-color);
     transition: all 0.2s ease;
-    overflow: hidden;
 }
 
 .product-card:hover {
     transform: translateY(-2px);
-    box-shadow: 0 4px 20px rgba(0, 0, 0, 0.1);
-    border-color: var(--accent-blue);
+    box-shadow: var(--shadow-lg);
 }
 
 .product-image {
@@ -238,23 +249,25 @@
     justify-content: center;
 }
 
-.placeholder-image {
+.product-placeholder {
     display: flex;
     align-items: center;
     justify-content: center;
-    color: var(--text-muted);
 }
 
-.product-badge {
+.product-category {
     position: absolute;
     top: 10px;
     right: 10px;
+    background: var(--accent-blue);
+    color: white;
     padding: 4px 8px;
+    border-radius: 12px;
     font-size: 12px;
-    border-radius: 6px;
+    font-weight: 500;
 }
 
-.product-info {
+.product-content {
     padding: 20px;
 }
 
@@ -262,55 +275,178 @@
     font-size: 18px;
     font-weight: 600;
     color: var(--text-primary);
-    margin-bottom: 5px;
+    margin: 0 0 8px 0;
 }
 
-.product-category {
-    font-size: 14px;
+.product-description {
     color: var(--text-muted);
+    font-size: 14px;
+    margin-bottom: 15px;
+    line-height: 1.5;
+    display: -webkit-box;
+    -webkit-line-clamp: 2;
+    -webkit-box-orient: vertical;
+    overflow: hidden;
+}
+
+.product-details {
+    margin-bottom: 15px;
+}
+
+.price-section {
     margin-bottom: 10px;
 }
 
 .product-price {
     font-size: 20px;
-    font-weight: 700;
-    color: var(--accent-blue);
-    margin-bottom: 10px;
+    font-weight: bold;
+    color: var(--accent-green);
 }
 
-.product-stock {
-    margin-bottom: 15px;
+.product-cost {
+    font-size: 14px;
+    color: var(--text-muted);
+    margin-left: 10px;
+}
+
+.inventory-section {
+    display: flex;
+    align-items: center;
+    gap: 10px;
+    flex-wrap: wrap;
 }
 
 .stock-level {
-    font-size: 12px;
-    font-weight: 600;
-    padding: 4px 8px;
-    border-radius: 6px;
+    display: flex;
+    align-items: center;
+    gap: 5px;
+    font-size: 14px;
 }
 
-.stock-good {
-    background: rgba(34, 197, 94, 0.1);
+.stock-level.in-stock {
     color: var(--success);
 }
 
-.stock-low {
-    background: rgba(245, 158, 11, 0.1);
+.stock-level.low-stock {
     color: var(--warning);
 }
 
-.stock-out {
-    background: rgba(239, 68, 68, 0.1);
+.low-stock-warning {
+    display: flex;
+    align-items: center;
+    gap: 5px;
+    font-size: 12px;
     color: var(--danger);
+    background: rgba(239, 68, 68, 0.1);
+    padding: 2px 6px;
+    border-radius: 4px;
 }
 
 .product-actions {
     display: flex;
     gap: 8px;
+    flex-wrap: wrap;
 }
 
-.product-actions .btn {
-    flex: 1;
+.pagination-container {
+    display: flex;
+    justify-content: center;
+    margin-top: 30px;
+}
+
+.pagination {
+    display: flex;
+    align-items: center;
+    gap: 20px;
+    padding: 20px;
+    background: var(--bg-card);
+    border-radius: 12px;
+    border: 1px solid var(--border-color);
+}
+
+.pagination-link {
+    display: flex;
+    align-items: center;
+    gap: 5px;
+    padding: 8px 12px;
+    background: var(--accent-blue);
+    color: white;
+    text-decoration: none;
+    border-radius: 6px;
+    transition: background-color 0.2s;
+}
+
+.pagination-link:hover {
+    background: var(--accent-blue-dark);
+}
+
+.pagination-info {
+    color: var(--text-muted);
+    font-size: 14px;
+}
+
+.empty-state {
+    text-align: center;
+    padding: 60px 20px;
+}
+
+.empty-icon {
+    margin-bottom: 20px;
+}
+
+.modal {
+    display: none;
+    position: fixed;
+    z-index: 1000;
+    left: 0;
+    top: 0;
+    width: 100%;
+    height: 100%;
+    background-color: rgba(0, 0, 0, 0.5);
+}
+
+.modal-content {
+    background-color: var(--bg-card);
+    margin: 5% auto;
+    padding: 0;
+    border-radius: 12px;
+    width: 90%;
+    max-width: 600px;
+    max-height: 80vh;
+    overflow: hidden;
+}
+
+.modal-header {
+    display: flex;
+    justify-content: space-between;
+    align-items: center;
+    padding: 20px;
+    border-bottom: 1px solid var(--border-color);
+}
+
+.modal-header h2 {
+    margin: 0;
+    color: var(--text-primary);
+}
+
+.modal-close {
+    background: none;
+    border: none;
+    font-size: 24px;
+    color: var(--text-muted);
+    cursor: pointer;
+    padding: 0;
+    width: 30px;
+    height: 30px;
+    display: flex;
+    align-items: center;
+    justify-content: center;
+}
+
+.modal-body {
+    padding: 20px;
+    max-height: 60vh;
+    overflow-y: auto;
 }
 
 @media (max-width: 768px) {
@@ -318,59 +454,70 @@
         grid-template-columns: 1fr;
     }
     
-    .card-body > div {
-        grid-template-columns: 1fr;
+    .search-form {
+        flex-direction: column;
+        align-items: stretch;
+    }
+    
+    .search-group {
+        min-width: auto;
+    }
+    
+    .filter-group {
+        min-width: auto;
+    }
+    
+    .header-actions {
+        flex-direction: column;
+        gap: 10px;
     }
 }
 </style>
 
 <script>
+function editProduct(productId) {
+    showNotification('Product editing would open here', 'info');
+}
+
+function addToOrder(productId) {
+    showNotification('Product added to order (integration pending)', 'success');
+}
+
+function viewProduct(productId) {
+    fetch(`/api/products/${productId}`)
+        .then(response => response.json())
+        .then(data => {
+            document.getElementById('modalTitle').textContent = data.name;
+            document.getElementById('modalBody').innerHTML = `
+                <div class="product-detail-view">
+                    <h3>${data.name}</h3>
+                    <p><strong>Price:</strong> $${data.price}</p>
+                    ${data.category ? `<p><strong>Category:</strong> ${data.category}</p>` : ''}
+                    ${data.description ? `<p><strong>Description:</strong> ${data.description}</p>` : ''}
+                    ${data.inventory ? `<p><strong>Stock:</strong> ${data.inventory.quantity} units</p>` : ''}
+                </div>
+            `;
+            document.getElementById('productModal').style.display = 'block';
+        })
+        .catch(error => {
+            showNotification('Error loading product details', 'error');
+        });
+}
+
 function showAddProductModal() {
     showNotification('Add product form would open here', 'info');
 }
 
-function editProduct(id) {
-    showNotification(`Edit product ${id} form would open here`, 'info');
+function closeModal() {
+    document.getElementById('productModal').style.display = 'none';
 }
 
-function viewProduct(id) {
-    showNotification(`Product ${id} details would be shown here`, 'info');
+// Close modal when clicking outside
+window.onclick = function(event) {
+    const modal = document.getElementById('productModal');
+    if (event.target === modal) {
+        closeModal();
+    }
 }
-
-function resetFilters() {
-    document.getElementById('categoryFilter').value = '';
-    document.getElementById('statusFilter').value = '';
-    document.getElementById('searchFilter').value = '';
-    filterProducts();
-}
-
-function filterProducts() {
-    const category = document.getElementById('categoryFilter').value;
-    const status = document.getElementById('statusFilter').value;
-    const search = document.getElementById('searchFilter').value.toLowerCase();
-    
-    const cards = document.querySelectorAll('.product-card');
-    
-    cards.forEach(card => {
-        const cardCategory = card.dataset.category;
-        const cardStatus = card.dataset.status;
-        const cardName = card.querySelector('.product-name').textContent.toLowerCase();
-        
-        const categoryMatch = !category || cardCategory === category;
-        const statusMatch = !status || cardStatus === status;
-        const searchMatch = !search || cardName.includes(search);
-        
-        if (categoryMatch && statusMatch && searchMatch) {
-            card.style.display = 'block';
-        } else {
-            card.style.display = 'none';
-        }
-    });
-}
-
-// Add event listeners for filters
-document.getElementById('categoryFilter').addEventListener('change', filterProducts);
-document.getElementById('statusFilter').addEventListener('change', filterProducts);
-document.getElementById('searchFilter').addEventListener('input', filterProducts);
 </script>
 {% endblock %}

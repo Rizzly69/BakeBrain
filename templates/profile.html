@@ -150,7 +150,8 @@
                     </tr>
                 </thead>
                 <tbody>
-                    {% for order in current_user.orders|sort(attribute='created_at', reverse=true)[:5] %}
+                    {% set recent_orders = current_user.orders|list|sort(attribute='created_at', reverse=true) %}
+                    {% for order in recent_orders[:5] %}
                     <tr>
                         <td>{{ order.order_number }}</td>
                         <td>

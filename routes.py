@@ -1,4 +1,4 @@
-from flask import render_template, redirect, url_for, flash, request, jsonify
+from flask import render_template, redirect, url_for, flash, request, jsonify, send_file, make_response
 from flask_login import login_user, logout_user, login_required, current_user
 from werkzeug.security import check_password_hash, generate_password_hash
 from datetime import datetime, timedelta, date
@@ -332,8 +332,150 @@ def update_order_status(order_id):
 @login_required
 @requires_role(['admin', 'manager'])
 def refresh_insights():
-    insights = generate_ai_insights()
+    from ai_engine import SmartBakeryAI
+    ai_engine = SmartBakeryAI()
+    insights = ai_engine.generate_all_insights()
     return jsonify({'success': True, 'insights': len(insights)})
+
+
+# PDF Generation Routes
+@app.route('/download/invoice/<int:order_id>')
+@login_required
+def download_invoice(order_id):
+    order = Order.query.get_or_404(order_id)
+    
+    # Check permissions
+    if current_user.role.name not in ['admin', 'manager'] and order.customer_id != current_user.id:
+        flash('You do not have permission to download this invoice.', 'error')
+        return redirect(url_for('orders'))
+    
+    from pdf_generator import SmartBillGenerator
+    pdf_generator = SmartBillGenerator()
+    pdf_buffer = pdf_generator.generate_invoice_pdf(order_id)
+    
+    if pdf_buffer:
+        return send_file(
+            pdf_buffer,
+            as_attachment=True,
+            download_name=f'invoice_{order.order_number}.pdf',
+            mimetype='application/pdf'
+        )
+    else:
+        flash('Error generating invoice PDF.', 'error')
+        return redirect(url_for('orders'))
+
+
+@app.route('/download/daily-report')
+@login_required
+@requires_role(['admin', 'manager'])
+def download_daily_report():
+    report_date = request.args.get('date')
+    if report_date:
+        try:
+            report_date = datetime.strptime(report_date, '%Y-%m-%d').date()
+        except ValueError:
+            report_date = date.today()
+    else:
+        report_date = date.today()
+    
+    from pdf_generator import SmartBillGenerator
+    pdf_generator = SmartBillGenerator()
+    pdf_buffer = pdf_generator.generate_daily_sales_report(report_date)
+    
+    return send_file(
+        pdf_buffer,
+        as_attachment=True,
+        download_name=f'daily_sales_report_{report_date.strftime("%Y%m%d")}.pdf',
+        mimetype='application/pdf'
+    )
+
+
+@app.route('/download/inventory-report')
+@login_required
+@requires_role(['admin', 'manager'])
+def download_inventory_report():
+    from pdf_generator import SmartBillGenerator
+    pdf_generator = SmartBillGenerator()
+    pdf_buffer = pdf_generator.generate_inventory_report()
+    
+    return send_file(
+        pdf_buffer,
+        as_attachment=True,
+        download_name=f'inventory_report_{datetime.now().strftime("%Y%m%d")}.pdf',
+        mimetype='application/pdf'
+    )
+
+
+# Advanced AI Analytics Routes
+@app.route('/ai-insights')
+@login_required
+@requires_role(['admin', 'manager'])
+def ai_insights():
+    insights = AIInsight.query.filter_by(is_active=True).order_by(AIInsight.created_at.desc()).all()
+    
+    # Group insights by type
+    grouped_insights = {}
+    for insight in insights:
+        if insight.insight_type not in grouped_insights:
+            grouped_insights[insight.insight_type] = []
+        grouped_insights[insight.insight_type].append(insight)
+    
+    return render_template('ai_insights.html', grouped_insights=grouped_insights)
+
+
+@app.route('/ai-insights/regenerate', methods=['POST'])
+@login_required
+@requires_role(['admin', 'manager'])
+def regenerate_ai_insights():
+    from ai_engine import SmartBakeryAI
+    ai_engine = SmartBakeryAI()
+    insights = ai_engine.generate_all_insights()
+    
+    flash(f'Generated {len(insights)} new AI insights!', 'success')
+    return redirect(url_for('ai_insights'))
+
+
+@app.route('/api/ai-insights/<insight_type>')
+@login_required
+@requires_role(['admin', 'manager'])
+def get_ai_insights_api(insight_type):
+    insights = AIInsight.query.filter_by(
+        insight_type=insight_type,
+        is_active=True
+    ).order_by(AIInsight.created_at.desc()).limit(5).all()
+    
+    return jsonify([{
+        'id': insight.id,
+        'title': insight.title,
+        'description': insight.description,
+        'confidence_score': insight.confidence_score,
+        'data': insight.data,
+        'created_at': insight.created_at.isoformat()
+    } for insight in insights])
+
+
+# Product API for templates
+@app.route('/api/products/<int:product_id>')
+@login_required
+def get_product_api(product_id):
+    product = Product.query.get_or_404(product_id)
+    
+    return jsonify({
+        'id': product.id,
+        'name': product.name,
+        'description': product.description,
+        'price': float(product.price),
+        'cost': float(product.cost) if product.cost else None,
+        'category': product.category.name if product.category else None,
+        'inventory': {
+            'quantity': product.inventory.quantity,
+            'min_stock_level': product.inventory.min_stock_level,
+            'max_stock_level': product.inventory.max_stock_level
+        } if product.inventory else None
+    })
+
+
+
 
 
 @app.errorhandler(404)

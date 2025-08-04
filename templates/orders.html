@@ -144,6 +144,12 @@
                                     <i data-feather="eye" style="width: 14px; height: 14px;"></i>
                                 </button>
                                 
+                                <a href="{{ url_for('download_invoice', order_id=order.id) }}" 
+                                   class="btn btn-success" style="font-size: 12px; padding: 4px 8px;"
+                                   data-tooltip="Download Invoice">
+                                    <i data-feather="download" style="width: 14px; height: 14px;"></i>
+                                </a>
+                                
                                 {% if current_user.role.name in ['admin', 'manager', 'staff'] and order.status.value not in ['delivered', 'cancelled'] %}
                                 <div class="dropdown" style="position: relative;">
                                     <button class="btn btn-primary" style="font-size: 12px; padding: 4px 8px;"

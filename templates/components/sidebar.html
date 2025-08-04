@@ -70,6 +70,13 @@
                     Reports
                 </a>
             </li>
+            
+            <li class="nav-item">
+                <a href="{{ url_for('ai_insights') }}" class="nav-link {{ 'active' if request.endpoint == 'ai_insights' }}">
+                    <i data-feather="brain" class="nav-icon"></i>
+                    AI Insights
+                </a>
+            </li>
             {% endif %}
             
             <li class="nav-item" style="margin-top: 20px; border-top: 1px solid var(--bg-tertiary); padding-top: 20px;">
