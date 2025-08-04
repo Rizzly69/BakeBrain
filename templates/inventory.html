@@ -17,29 +17,138 @@
         </div>
     </div>
     
+    <!-- Critical Ingredients Alert -->
+    {% if critical_ingredients %}
+    <div class="card" style="border: 1px solid var(--danger); box-shadow: 0 0 15px rgba(239, 68, 68, 0.3);">
+        <div class="card-header">
+            <h3 class="card-title" style="color: var(--danger);">
+                <i data-feather="alert-circle"></i>
+                CRITICAL: Raw Materials Shortage
+            </h3>
+        </div>
+        <div class="critical-alerts-grid" style="display: grid; grid-template-columns: repeat(auto-fit, minmax(280px, 1fr)); gap: 15px;">
+            {% for ingredient in critical_ingredients %}
+            <div class="critical-ingredient-item" style="background: rgba(239, 68, 68, 0.1); padding: 20px; border-radius: 8px; border: 1px solid var(--danger);">
+                <div style="font-weight: 600; color: var(--danger); margin-bottom: 8px;">
+                    <i data-feather="package" style="width: 16px; height: 16px; margin-right: 5px;"></i>
+                    {{ ingredient.name }}
+                </div>
+                <div class="ingredient-details">
+                    <div style="color: var(--danger); font-size: 14px; margin-bottom: 5px;">
+                        Stock: {{ ingredient.current_stock }} {{ ingredient.unit_of_measure }} / Min: {{ ingredient.min_stock_level }} {{ ingredient.unit_of_measure }}
+                    </div>
+                    <div style="font-size: 12px; color: var(--text-muted); margin-bottom: 5px;">
+                        Location: {{ ingredient.location }}
+                    </div>
+                    <div style="font-size: 12px; color: var(--text-muted); margin-bottom: 10px;">
+                        Supplier: {{ ingredient.supplier }}
+                    </div>
+                    {% if ingredient.supplier_contact %}
+                    <div style="font-size: 11px; color: var(--text-muted); margin-bottom: 10px;">
+                        Contact: {{ ingredient.supplier_contact }}
+                    </div>
+                    {% endif %}
+                </div>
+                <div style="margin-top: 12px;">
+                    <button class="btn btn-danger" style="font-size: 12px; padding: 6px 12px;" onclick="orderIngredient('{{ ingredient.name }}', '{{ ingredient.supplier_contact }}')">
+                        <i data-feather="phone"></i>
+                        Order Now
+                    </button>
+                </div>
+            </div>
+            {% endfor %}
+        </div>
+    </div>
+    {% endif %}
+
     <!-- Low Stock Alerts -->
-    {% if low_stock_items %}
+    {% if low_stock_items or low_stock_ingredients %}
     <div class="card" style="border: 1px solid var(--warning); box-shadow: 0 0 15px rgba(255, 170, 0, 0.3);">
         <div class="card-header">
             <h3 class="card-title" style="color: var(--warning);">
                 <i data-feather="alert-triangle"></i>
                 Low Stock Alerts
             </h3>
-        </div>
-        <div class="low-stock-grid" style="display: grid; grid-template-columns: repeat(auto-fit, minmax(200px, 1fr)); gap: 15px;">
-            {% for item in low_stock_items %}
-            <div class="low-stock-item" style="background: rgba(255, 170, 0, 0.1); padding: 15px; border-radius: 8px; border: 1px solid var(--warning);">
-                <div style="font-weight: 600; color: var(--text-primary);">{{ item.product.name }}</div>
-                <div style="color: var(--warning); font-size: 14px;">
-                    Stock: {{ item.quantity }} / Min: {{ item.min_stock_level }}
-                </div>
-                <div style="margin-top: 8px;">
-                    <a href="{{ url_for('update_inventory', id=item.id) }}" class="btn btn-warning" style="font-size: 12px; padding: 4px 8px;">
-                        Restock
-                    </a>
-                </div>
+            <div class="alert-tabs" style="display: flex; gap: 10px;">
+                <button class="tab-btn active" onclick="showTab('products')" id="products-tab">
+                    Finished Products ({{ low_stock_items|length }})
+                </button>
+                <button class="tab-btn" onclick="showTab('ingredients')" id="ingredients-tab">
+                    Raw Materials ({{ low_stock_ingredients|length }})
+                </button>
             </div>
-            {% endfor %}
+        </div>
+        
+        <!-- Products Tab -->
+        <div id="products-content" class="tab-content active">
+            {% if low_stock_items %}
+            <div class="low-stock-grid" style="display: grid; grid-template-columns: repeat(auto-fit, minmax(200px, 1fr)); gap: 15px;">
+                {% for item in low_stock_items %}
+                <div class="low-stock-item" style="background: rgba(255, 170, 0, 0.1); padding: 15px; border-radius: 8px; border: 1px solid var(--warning);">
+                    <div style="font-weight: 600; color: var(--text-primary);">{{ item.product.name }}</div>
+                    <div style="color: var(--warning); font-size: 14px;">
+                        Stock: {{ item.quantity }} / Min: {{ item.min_stock_level }}
+                    </div>
+                    <div style="margin-top: 8px;">
+                        <a href="{{ url_for('update_inventory', id=item.id) }}" class="btn btn-warning" style="font-size: 12px; padding: 4px 8px;">
+                            Restock
+                        </a>
+                    </div>
+                </div>
+                {% endfor %}
+            </div>
+            {% else %}
+            <div style="text-align: center; padding: 40px; color: var(--text-muted);">
+                <i data-feather="check-circle" style="width: 48px; height: 48px; margin-bottom: 10px;"></i>
+                <p>All finished products are well stocked</p>
+            </div>
+            {% endif %}
+        </div>
+        
+        <!-- Ingredients Tab -->
+        <div id="ingredients-content" class="tab-content" style="display: none;">
+            {% if low_stock_ingredients %}
+            <div class="ingredients-grid" style="display: grid; grid-template-columns: repeat(auto-fit, minmax(280px, 1fr)); gap: 15px;">
+                {% for ingredient in low_stock_ingredients %}
+                <div class="ingredient-item" style="background: rgba(255, 170, 0, 0.1); padding: 15px; border-radius: 8px; border: 1px solid var(--warning);">
+                    <div style="font-weight: 600; color: var(--text-primary); margin-bottom: 8px;">
+                        <i data-feather="layers" style="width: 16px; height: 16px; margin-right: 5px;"></i>
+                        {{ ingredient.name }}
+                    </div>
+                    <div class="ingredient-details">
+                        <div style="color: var(--warning); font-size: 14px; margin-bottom: 5px;">
+                            Stock: {{ ingredient.current_stock }} {{ ingredient.unit_of_measure }} / Min: {{ ingredient.min_stock_level }} {{ ingredient.unit_of_measure }}
+                        </div>
+                        <div style="font-size: 12px; color: var(--text-muted); margin-bottom: 5px;">
+                            Reorder at: {{ ingredient.reorder_point }} {{ ingredient.unit_of_measure }}
+                        </div>
+                        {% if ingredient.expiry_date %}
+                        <div style="font-size: 12px; color: var(--text-muted); margin-bottom: 5px;">
+                            Expires: {{ ingredient.expiry_date.strftime('%Y-%m-%d') }}
+                        </div>
+                        {% endif %}
+                        <div style="font-size: 12px; color: var(--text-muted); margin-bottom: 5px;">
+                            Location: {{ ingredient.location }}
+                        </div>
+                        <div style="font-size: 12px; color: var(--text-muted);">
+                            Supplier: {{ ingredient.supplier }}
+                        </div>
+                    </div>
+                    <div style="margin-top: 12px;">
+                        <button class="btn btn-warning" style="font-size: 12px; padding: 4px 8px;" onclick="reorderIngredient('{{ ingredient.name }}')">
+                            <i data-feather="shopping-cart"></i>
+                            Reorder
+                        </button>
+                    </div>
+                </div>
+                {% endfor %}
+            </div>
+            {% else %}
+            <div style="text-align: center; padding: 40px; color: var(--text-muted);">
+                <i data-feather="check-circle" style="width: 48px; height: 48px; margin-bottom: 10px;"></i>
+                <p>All raw materials are well stocked</p>
+            </div>
+            {% endif %}
         </div>
     </div>
     {% endif %}
@@ -167,6 +276,134 @@
         </div>
     </div>
 </div>
+
+<style>
+.tab-btn {
+    padding: 8px 16px;
+    border: 1px solid var(--border-color);
+    background: var(--bg-secondary);
+    color: var(--text-secondary);
+    border-radius: 6px;
+    cursor: pointer;
+    transition: all 0.2s ease;
+}
+
+.tab-btn.active {
+    background: var(--accent-blue);
+    color: white;
+    border-color: var(--accent-blue);
+}
+
+.tab-content {
+    padding: 20px;
+}
+
+.ingredient-details {
+    background: rgba(255, 255, 255, 0.05);
+    border-radius: 6px;
+    padding: 10px;
+    margin: 10px 0;
+}
+</style>
+
+<script>
+// Tab switching functionality
+function showTab(tabName) {
+    // Hide all tab contents
+    document.querySelectorAll('.tab-content').forEach(content => {
+        content.style.display = 'none';
+    });
+    
+    // Remove active class from all tabs
+    document.querySelectorAll('.tab-btn').forEach(btn => {
+        btn.classList.remove('active');
+    });
+    
+    // Show selected tab content
+    document.getElementById(tabName + '-content').style.display = 'block';
+    
+    // Add active class to selected tab
+    document.getElementById(tabName + '-tab').classList.add('active');
+}
+
+// Ingredient management functions
+function orderIngredient(ingredientName, supplierContact) {
+    const message = `Need to order ${ingredientName}. Contact: ${supplierContact}`;
+    
+    if (supplierContact && supplierContact !== 'None') {
+        // Show contact information and copy to clipboard
+        navigator.clipboard.writeText(supplierContact).then(() => {
+            showNotification(`Contact info copied: ${supplierContact}`, 'success');
+        }).catch(() => {
+            showNotification(message, 'info');
+        });
+    } else {
+        showNotification(`Need to order ${ingredientName} - check supplier database`, 'warning');
+    }
+}
+
+function reorderIngredient(ingredientName) {
+    showNotification(`Reorder request for ${ingredientName} would be sent to supplier`, 'info');
+}
+
+function quickRestock(itemId) {
+    const quantity = prompt('Enter quantity to add:');
+    if (quantity && !isNaN(quantity) && parseInt(quantity) > 0) {
+        // In a real system, this would make an AJAX call
+        showNotification(`Added ${quantity} units to inventory`, 'success');
+        // Optionally refresh the page or update the UI
+        setTimeout(() => {
+            window.location.reload();
+        }, 1500);
+    }
+}
+
+// Initialize charts and other functionality
+document.addEventListener('DOMContentLoaded', function() {
+    // Initialize inventory chart if chart.js is available
+    if (typeof Chart !== 'undefined') {
+        const ctx = document.getElementById('inventoryChart');
+        if (ctx) {
+            new Chart(ctx, {
+                type: 'bar',
+                data: {
+                    labels: ['Low Stock', 'Normal Stock', 'Overstocked'],
+                    datasets: [{
+                        label: 'Inventory Status',
+                        data: [{{ low_stock_items|length }}, {{ inventory_items.total - low_stock_items|length }}, 0],
+                        backgroundColor: [
+                            'rgba(255, 170, 0, 0.7)',
+                            'rgba(16, 185, 129, 0.7)',
+                            'rgba(59, 130, 246, 0.7)'
+                        ],
+                        borderColor: [
+                            'rgb(255, 170, 0)',
+                            'rgb(16, 185, 129)',
+                            'rgb(59, 130, 246)'
+                        ],
+                        borderWidth: 1
+                    }]
+                },
+                options: {
+                    responsive: true,
+                    scales: {
+                        y: {
+                            beginAtZero: true
+                        }
+                    }
+                }
+            });
+        }
+    }
+    
+    // Initialize feather icons
+    if (typeof feather !== 'undefined') {
+        feather.replace();
+    }
+});
+</script>
+
+{% endblock %}
 
 <style>
 .page-header {

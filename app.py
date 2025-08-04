@@ -48,7 +48,21 @@ with app.app_context():
     import routes
     
     db.create_all()
-    
+
+# Add custom Jinja filters
+import json
+
+@app.template_filter('from_json')
+def from_json_filter(value):
+    """Convert JSON string to Python object"""
+    if isinstance(value, str):
+        try:
+            return json.loads(value)
+        except (json.JSONDecodeError, TypeError):
+            return {}
+    return value if isinstance(value, dict) else {}
+
+with app.app_context():
     # Create default admin user if it doesn't exist
     from models import User, Role
     from werkzeug.security import generate_password_hash
