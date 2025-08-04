@@ -1,0 +1,68 @@
+{% extends "base.html" %}
+
+{% block title %}Login - Smart Bakery Management{% endblock %}
+
+{% block login_content %}
+<div class="login-container">
+    <div class="login-card">
+        <div class="login-title">
+            <i data-feather="home" style="margin-right: 10px;"></i>
+            Smart Bakery Management
+        </div>
+        
+        {% with messages = get_flashed_messages(with_categories=true) %}
+            {% if messages %}
+                {% for category, message in messages %}
+                    <div class="alert alert-{{ 'error' if category == 'error' else category }}">
+                        {{ message }}
+                    </div>
+                {% endfor %}
+            {% endif %}
+        {% endwith %}
+        
+        <form method="POST" data-validate>
+            {{ form.hidden_tag() }}
+            
+            <div class="form-group">
+                {{ form.username.label(class="form-label") }}
+                {{ form.username(class="form-control", placeholder="Enter your username") }}
+            </div>
+            
+            <div class="form-group">
+                {{ form.password.label(class="form-label") }}
+                {{ form.password(class="form-control", placeholder="Enter your password") }}
+            </div>
+            
+            <div class="form-group">
+                <label class="checkbox-label">
+                    {{ form.remember_me() }}
+                    {{ form.remember_me.label.text }}
+                </label>
+            </div>
+            
+            <div class="form-group">
+                {{ form.submit(class="btn btn-primary", style="width: 100%;") }}
+            </div>
+        </form>
+        
+        <div style="text-align: center; margin-top: 20px; color: var(--text-muted); font-size: 14px;">
+            <p>Demo Credentials:</p>
+            <p><strong>Username:</strong> admin | <strong>Password:</strong> admin123</p>
+        </div>
+    </div>
+</div>
+
+<style>
+.checkbox-label {
+    display: flex;
+    align-items: center;
+    color: var(--text-secondary);
+    cursor: pointer;
+}
+
+.checkbox-label input[type="checkbox"] {
+    margin-right: 8px;
+    accent-color: var(--neon-cyan);
+}
+</style>
+{% endblock %}

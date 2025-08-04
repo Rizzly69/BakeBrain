@@ -1,0 +1,239 @@
+{% extends "base.html" %}
+
+{% block title %}Customers - Smart Bakery Management{% endblock %}
+
+{% block content %}
+<div class="customers-page">
+    <div class="page-header">
+        <h1 class="header-title">
+            <i data-feather="users"></i>
+            Customer Management
+        </h1>
+        <div class="header-actions">
+            <a href="#" class="btn btn-primary" onclick="showAddCustomerModal()">
+                <i data-feather="user-plus"></i>
+                Add Customer
+            </a>
+        </div>
+    </div>
+    
+    <!-- Customer Stats -->
+    <div class="stats-grid" style="grid-template-columns: repeat(auto-fit, minmax(200px, 1fr)); margin-bottom: 20px;">
+        <div class="stat-card">
+            <div class="stat-value">{{ customers.total }}</div>
+            <div class="stat-label">Total Customers</div>
+        </div>
+        <div class="stat-card">
+            <div class="stat-value">{{ customers.items|selectattr('orders')|list|length }}</div>
+            <div class="stat-label">Active Customers</div>
+        </div>
+        <div class="stat-card">
+            <div class="stat-value">
+                {% set new_customers = customers.items|selectattr('created_at')|selectattr('created_at', 'ge', (moment().subtract(30, 'days')))|list %}
+                {{ new_customers|length if new_customers else 0 }}
+            </div>
+            <div class="stat-label">New This Month</div>
+        </div>
+    </div>
+    
+    <!-- Search and Filters -->
+    <div class="card">
+        <div class="card-header">
+            <h3 class="card-title">Search Customers</h3>
+        </div>
+        
+        <div class="search-container">
+            <form method="GET" style="display: flex; gap: 15px; align-items: center;">
+                <div style="flex: 1;">
+                    <input type="text" name="search" class="search-input" 
+                           placeholder="Search by name, email, or phone..." 
+                           value="{{ search }}"
+                           style="width: 100%;">
+                </div>
+                <button type="submit" class="btn btn-secondary">
+                    <i data-feather="search"></i>
+                    Search
+                </button>
+                {% if search %}
+                <a href="{{ url_for('customers') }}" class="btn btn-secondary">
+                    <i data-feather="x"></i>
+                    Clear
+                </a>
+                {% endif %}
+            </form>
+        </div>
+    </div>
+    
+    <!-- Customers Table -->
+    <div class="card">
+        <div class="card-header">
+            <h3 class="card-title">Customers</h3>
+            <div style="display: flex; gap: 10px;">
+                <span class="badge badge-info">{{ customers.total }} Total</span>
+            </div>
+        </div>
+        
+        <div class="table-container">
+            <table class="table">
+                <thead>
+                    <tr>
+                        <th>Customer</th>
+                        <th>Contact</th>
+                        <th>Orders</th>
+                        <th>Total Spent</th>
+                        <th>Last Order</th>
+                        <th>Joined</th>
+                        <th>Status</th>
+                        <th>Actions</th>
+                    </tr>
+                </thead>
+                <tbody>
+                    {% for customer in customers.items %}
+                    <tr>
+                        <td>
+                            <div style="font-weight: 600; color: var(--text-primary);">
+                                {{ customer.first_name }} {{ customer.last_name }}
+                            </div>
+                            <div style="font-size: 12px; color: var(--text-muted);">
+                                ID: {{ customer.id }}
+                            </div>
+                        </td>
+                        <td>
+                            <div style="color: var(--text-secondary);">{{ customer.email }}</div>
+                            {% if customer.phone %}
+                            <div style="font-size: 12px; color: var(--text-muted);">{{ customer.phone }}</div>
+                            {% endif %}
+                        </td>
+                        <td>
+                            <div style="font-weight: 600; color: var(--neon-cyan);">
+                                {{ customer.orders|length }}
+                            </div>
+                            <div style="font-size: 12px; color: var(--text-muted);">orders</div>
+                        </td>
+                        <td>
+                            {% set total_spent = customer.orders|selectattr('status', 'ne', 'cancelled')|sum(attribute='total_amount') %}
+                            <div style="font-weight: 600; color: var(--success);">
+                                ${{ "%.2f"|format(total_spent) }}
+                            </div>
+                        </td>
+                        <td>
+                            {% if customer.orders %}
+                                {% set last_order = customer.orders|sort(attribute='created_at', reverse=true)|first %}
+                                <div class="timestamp" data-datetime="{{ last_order.created_at.isoformat() }}">
+                                    {{ last_order.created_at.strftime('%m/%d/%Y') }}
+                                </div>
+                                <div style="font-size: 12px; color: var(--text-muted);">
+                                    ${{ "%.2f"|format(last_order.total_amount) }}
+                                </div>
+                            {% else %}
+                                <span style="color: var(--text-muted);">No orders</span>
+                            {% endif %}
+                        </td>
+                        <td class="timestamp" data-datetime="{{ customer.created_at.isoformat() }}">
+                            {{ customer.created_at.strftime('%m/%d/%Y') }}
+                        </td>
+                        <td>
+                            <span class="badge badge-{{ 'success' if customer.is_active else 'danger' }}">
+                                {{ 'Active' if customer.is_active else 'Inactive' }}
+                            </span>
+                        </td>
+                        <td>
+                            <div style="display: flex; gap: 5px;">
+                                <button class="btn btn-secondary" style="font-size: 12px; padding: 4px 8px;"
+                                        onclick="viewCustomerDetails({{ customer.id }})"
+                                        data-tooltip="View details">
+                                    <i data-feather="eye" style="width: 14px; height: 14px;"></i>
+                                </button>
+                                <button class="btn btn-primary" style="font-size: 12px; padding: 4px 8px;"
+                                        onclick="editCustomer({{ customer.id }})"
+                                        data-tooltip="Edit customer">
+                                    <i data-feather="edit" style="width: 14px; height: 14px;"></i>
+                                </button>
+                                <button class="btn btn-success" style="font-size: 12px; padding: 4px 8px;"
+                                        onclick="createOrderForCustomer({{ customer.id }})"
+                                        data-tooltip="Create order">
+                                    <i data-feather="plus" style="width: 14px; height: 14px;"></i>
+                                </button>
+                            </div>
+                        </td>
+                    </tr>
+                    {% endfor %}
+                </tbody>
+            </table>
+        </div>
+        
+        <!-- Pagination -->
+        {% if customers.pages > 1 %}
+        <div class="pagination">
+            {% if customers.has_prev %}
+                <a href="{{ url_for('customers', page=customers.prev_num, search=search) }}">&laquo; Prev</a>
+            {% endif %}
+            
+            {% for page_num in customers.iter_pages() %}
+                {% if page_num %}
+                    {% if page_num != customers.page %}
+                        <a href="{{ url_for('customers', page=page_num, search=search) }}">{{ page_num }}</a>
+                    {% else %}
+                        <a href="#" class="active">{{ page_num }}</a>
+                    {% endif %}
+                {% else %}
+                    <span>...</span>
+                {% endif %}
+            {% endfor %}
+            
+            {% if customers.has_next %}
+                <a href="{{ url_for('customers', page=customers.next_num, search=search) }}">Next &raquo;</a>
+            {% endif %}
+        </div>
+        {% endif %}
+    </div>
+</div>
+
+<style>
+.page-header {
+    display: flex;
+    justify-content: space-between;
+    align-items: center;
+    margin-bottom: 20px;
+}
+
+.header-actions {
+    display: flex;
+    gap: 10px;
+}
+
+@media (max-width: 768px) {
+    .page-header {
+        flex-direction: column;
+        gap: 15px;
+        align-items: stretch;
+    }
+    
+    .header-actions {
+        justify-content: center;
+    }
+}
+</style>
+
+<script>
+function viewCustomerDetails(customerId) {
+    showNotification(`Viewing details for Customer ID: ${customerId}`, 'info');
+    // This would typically open a modal or navigate to a detailed view
+}
+
+function editCustomer(customerId) {
+    showNotification(`Editing Customer ID: ${customerId}`, 'info');
+    // This would typically open an edit form modal
+}
+
+function createOrderForCustomer(customerId) {
+    // Navigate to new order page with pre-selected customer
+    window.location.href = `{{ url_for('new_order') }}?customer_id=${customerId}`;
+}
+
+function showAddCustomerModal() {
+    showNotification('Add customer functionality would open here', 'info');
+    // This would typically open a modal with a customer creation form
+}
+</script>
+{% endblock %}

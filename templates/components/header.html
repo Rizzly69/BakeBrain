@@ -1,0 +1,187 @@
+<div class="header">
+    <div class="header-content">
+        <div class="header-left">
+            <button class="mobile-menu-btn" style="display: none;">
+                <i data-feather="menu"></i>
+            </button>
+            <h1 class="header-title">
+                {% block header_title %}
+                    {% if request.endpoint == 'dashboard' %}
+                        Dashboard
+                    {% elif request.endpoint == 'orders' %}
+                        Orders
+                    {% elif request.endpoint == 'inventory' %}
+                        Inventory
+                    {% elif request.endpoint == 'products' %}
+                        Products
+                    {% elif request.endpoint == 'catering' %}
+                        Catering
+                    {% elif request.endpoint == 'customers' %}
+                        Customers
+                    {% elif request.endpoint == 'staff' %}
+                        Staff
+                    {% elif request.endpoint == 'reports' %}
+                        Reports
+                    {% elif request.endpoint == 'profile' %}
+                        Profile
+                    {% else %}
+                        Smart Bakery Management
+                    {% endif %}
+                {% endblock %}
+            </h1>
+        </div>
+        
+        <div class="user-menu">
+            <div class="user-info">
+                <div style="text-align: right;">
+                    <div style="font-weight: 600; color: var(--text-primary);">
+                        {{ current_user.first_name }} {{ current_user.last_name }}
+                    </div>
+                    <div style="font-size: 12px; color: var(--neon-cyan);">
+                        {{ current_user.role.name.title() }}
+                    </div>
+                </div>
+            </div>
+            
+            <div style="display: flex; align-items: center; gap: 15px;">
+                <!-- Notifications -->
+                <div class="notification-bell" style="position: relative;">
+                    <button class="btn-icon" onclick="toggleNotifications()" data-tooltip="Notifications">
+                        <i data-feather="bell" style="width: 20px; height: 20px;"></i>
+                        <span class="notification-badge" style="position: absolute; top: -5px; right: -5px; background: var(--error); color: white; border-radius: 50%; width: 18px; height: 18px; font-size: 10px; display: flex; align-items: center; justify-content: center;">3</span>
+                    </button>
+                </div>
+                
+                <!-- Quick Actions -->
+                {% if current_user.role.name in ['admin', 'manager', 'staff'] %}
+                <div class="quick-actions" style="display: flex; gap: 10px;">
+                    <a href="{{ url_for('new_order') }}" class="btn-icon" data-tooltip="New Order">
+                        <i data-feather="plus" style="width: 20px; height: 20px;"></i>
+                    </a>
+                </div>
+                {% endif %}
+                
+                <!-- User Dropdown -->
+                <div class="user-dropdown" style="position: relative;">
+                    <button class="btn-icon" onclick="toggleUserDropdown()" data-tooltip="User Menu">
+                        <i data-feather="user" style="width: 20px; height: 20px;"></i>
+                    </button>
+                    <div class="dropdown-menu" id="user-dropdown" style="display: none; position: absolute; top: 100%; right: 0; background: var(--bg-card); border: 1px solid var(--bg-tertiary); border-radius: 8px; padding: 10px; box-shadow: var(--shadow-dark); z-index: 1000; min-width: 150px;">
+                        <a href="{{ url_for('profile') }}" class="dropdown-item">
+                            <i data-feather="settings" style="width: 14px; height: 14px; margin-right: 8px;"></i>
+                            Profile
+                        </a>
+                        <div class="dropdown-divider" style="border-top: 1px solid var(--bg-tertiary); margin: 8px 0;"></div>
+                        <a href="{{ url_for('logout') }}" class="dropdown-item" style="color: var(--error);">
+                            <i data-feather="log-out" style="width: 14px; height: 14px; margin-right: 8px;"></i>
+                            Logout
+                        </a>
+                    </div>
+                </div>
+            </div>
+        </div>
+    </div>
+</div>
+
+<style>
+.btn-icon {
+    background: transparent;
+    border: 1px solid var(--bg-tertiary);
+    color: var(--text-secondary);
+    padding: 8px;
+    border-radius: 8px;
+    cursor: pointer;
+    transition: all 0.3s ease;
+    display: flex;
+    align-items: center;
+    justify-content: center;
+}
+
+.btn-icon:hover {
+    border-color: var(--neon-cyan);
+    color: var(--neon-cyan);
+    box-shadow: 0 0 10px rgba(0, 255, 255, 0.3);
+}
+
+.dropdown-item {
+    display: flex;
+    align-items: center;
+    padding: 8px 12px;
+    color: var(--text-secondary);
+    text-decoration: none;
+    border-radius: 4px;
+    transition: all 0.3s ease;
+    white-space: nowrap;
+}
+
+.dropdown-item:hover {
+    background: var(--bg-tertiary);
+    color: var(--neon-cyan);
+}
+
+.mobile-menu-btn {
+    background: transparent;
+    border: 1px solid var(--bg-tertiary);
+    color: var(--text-secondary);
+    padding: 8px;
+    border-radius: 8px;
+    cursor: pointer;
+    margin-right: 15px;
+}
+
+.mobile-menu-btn:hover {
+    border-color: var(--neon-cyan);
+    color: var(--neon-cyan);
+}
+
+@media (max-width: 768px) {
+    .mobile-menu-btn {
+        display: block !important;
+    }
+    
+    .header-content {
+        flex-direction: row;
+        gap: 0;
+    }
+    
+    .user-menu {
+        flex-direction: row;
+        gap: 10px;
+    }
+    
+    .user-info {
+        display: none;
+    }
+}
+</style>
+
+<script>
+function toggleNotifications() {
+    // This would typically show a notifications dropdown
+    showNotification('No new notifications', 'info');
+}
+
+function toggleUserDropdown() {
+    const dropdown = document.getElementById('user-dropdown');
+    const isVisible = dropdown.style.display !== 'none';
+    
+    // Close all dropdowns
+    document.querySelectorAll('.dropdown-menu').forEach(d => {
+        d.style.display = 'none';
+    });
+    
+    // Show the user dropdown if it wasn't visible
+    if (!isVisible) {
+        dropdown.style.display = 'block';
+    }
+}
+
+// Close dropdowns when clicking outside
+document.addEventListener('click', function(e) {
+    if (!e.target.closest('.user-dropdown')) {
+        document.querySelectorAll('.dropdown-menu').forEach(d => {
+            d.style.display = 'none';
+        });
+    }
+});
+</script>

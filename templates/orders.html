@@ -1,0 +1,284 @@
+{% extends "base.html" %}
+
+{% block title %}Orders - Smart Bakery Management{% endblock %}
+
+{% block content %}
+<div class="orders-page">
+    <div class="page-header">
+        <h1 class="header-title">
+            <i data-feather="shopping-cart"></i>
+            Order Management
+        </h1>
+        <div class="header-actions">
+            {% if current_user.role.name in ['admin', 'manager', 'staff'] %}
+            <a href="{{ url_for('new_order') }}" class="btn btn-primary">
+                <i data-feather="plus"></i>
+                New Order
+            </a>
+            {% endif %}
+        </div>
+    </div>
+    
+    <!-- Filters and Search -->
+    <div class="card">
+        <div class="card-header">
+            <h3 class="card-title">Filter Orders</h3>
+        </div>
+        
+        <form method="GET" style="display: grid; grid-template-columns: repeat(auto-fit, minmax(200px, 1fr)); gap: 15px; align-items: end;">
+            <div class="form-group" style="margin-bottom: 0;">
+                <label class="form-label">Status</label>
+                <select name="status" class="form-control">
+                    <option value="">All Statuses</option>
+                    <option value="pending" {{ 'selected' if status_filter == 'pending' }}>Pending</option>
+                    <option value="confirmed" {{ 'selected' if status_filter == 'confirmed' }}>Confirmed</option>
+                    <option value="in_preparation" {{ 'selected' if status_filter == 'in_preparation' }}>In Preparation</option>
+                    <option value="ready" {{ 'selected' if status_filter == 'ready' }}>Ready</option>
+                    <option value="delivered" {{ 'selected' if status_filter == 'delivered' }}>Delivered</option>
+                    <option value="cancelled" {{ 'selected' if status_filter == 'cancelled' }}>Cancelled</option>
+                </select>
+            </div>
+            
+            <div class="form-group" style="margin-bottom: 0;">
+                <label class="form-label">Order Type</label>
+                <select name="type" class="form-control">
+                    <option value="">All Types</option>
+                    <option value="regular" {{ 'selected' if order_type_filter == 'regular' }}>Regular</option>
+                    <option value="catering" {{ 'selected' if order_type_filter == 'catering' }}>Catering</option>
+                    <option value="online" {{ 'selected' if order_type_filter == 'online' }}>Online</option>
+                </select>
+            </div>
+            
+            <div class="form-group" style="margin-bottom: 0;">
+                <button type="submit" class="btn btn-secondary" style="width: 100%;">
+                    <i data-feather="filter"></i>
+                    Apply Filters
+                </button>
+            </div>
+        </form>
+    </div>
+    
+    <!-- Orders Table -->
+    <div class="card">
+        <div class="card-header">
+            <h3 class="card-title">Orders</h3>
+            <div style="display: flex; gap: 10px;">
+                <span class="badge badge-info">{{ orders.total }} Total Orders</span>
+            </div>
+        </div>
+        
+        <div class="table-container">
+            <table class="table">
+                <thead>
+                    <tr>
+                        <th>Order #</th>
+                        {% if current_user.role.name in ['admin', 'manager', 'staff'] %}
+                        <th>Customer</th>
+                        {% endif %}
+                        <th>Type</th>
+                        <th>Amount</th>
+                        <th>Status</th>
+                        <th>Created</th>
+                        {% if current_user.role.name == 'catering' or orders.items[0].order_type.value == 'catering' %}
+                        <th>Event Date</th>
+                        {% endif %}
+                        <th>Actions</th>
+                    </tr>
+                </thead>
+                <tbody>
+                    {% for order in orders.items %}
+                    <tr data-order-id="{{ order.id }}">
+                        <td>
+                            <div style="font-weight: 600;">{{ order.order_number }}</div>
+                            {% if order.special_instructions %}
+                            <div style="font-size: 12px; color: var(--text-muted);">
+                                <i data-feather="message-square" style="width: 12px; height: 12px;"></i>
+                                Has special instructions
+                            </div>
+                            {% endif %}
+                        </td>
+                        {% if current_user.role.name in ['admin', 'manager', 'staff'] %}
+                        <td>
+                            <div>{{ order.customer.first_name }} {{ order.customer.last_name }}</div>
+                            <div style="font-size: 12px; color: var(--text-muted);">
+                                {{ order.customer.email }}
+                            </div>
+                        </td>
+                        {% endif %}
+                        <td>
+                            <span class="badge badge-info">
+                                {{ order.order_type.value.title() }}
+                            </span>
+                            {% if order.order_type.value == 'catering' and order.guest_count %}
+                            <div style="font-size: 12px; color: var(--text-muted);">
+                                {{ order.guest_count }} guests
+                            </div>
+                            {% endif %}
+                        </td>
+                        <td>
+                            <div style="font-weight: 600;">${{ "%.2f"|format(order.total_amount) }}</div>
+                            {% if order.items %}
+                            <div style="font-size: 12px; color: var(--text-muted);">
+                                {{ order.items|length }} item{{ 's' if order.items|length != 1 else '' }}
+                            </div>
+                            {% endif %}
+                        </td>
+                        <td>
+                            <span class="status-badge badge badge-{{ 'success' if order.status.value == 'delivered' else 'danger' if order.status.value == 'cancelled' else 'warning' if order.status.value == 'pending' else 'info' }}">
+                                {{ order.status.value.replace('_', ' ').title() }}
+                            </span>
+                        </td>
+                        <td class="timestamp" data-datetime="{{ order.created_at.isoformat() }}">
+                            {{ order.created_at.strftime('%m/%d/%Y %H:%M') }}
+                        </td>
+                        {% if order.order_type.value == 'catering' and order.event_date %}
+                        <td class="timestamp" data-datetime="{{ order.event_date.isoformat() }}">
+                            {{ order.event_date.strftime('%m/%d/%Y %H:%M') }}
+                        </td>
+                        {% endif %}
+                        <td>
+                            <div style="display: flex; gap: 5px;">
+                                <button class="btn btn-secondary" style="font-size: 12px; padding: 4px 8px;"
+                                        onclick="viewOrderDetails({{ order.id }})"
+                                        data-tooltip="View details">
+                                    <i data-feather="eye" style="width: 14px; height: 14px;"></i>
+                                </button>
+                                
+                                {% if current_user.role.name in ['admin', 'manager', 'staff'] and order.status.value not in ['delivered', 'cancelled'] %}
+                                <div class="dropdown" style="position: relative;">
+                                    <button class="btn btn-primary" style="font-size: 12px; padding: 4px 8px;"
+                                            onclick="toggleStatusDropdown({{ order.id }})"
+                                            data-tooltip="Update status">
+                                        <i data-feather="edit" style="width: 14px; height: 14px;"></i>
+                                    </button>
+                                    <div class="status-dropdown" id="status-dropdown-{{ order.id }}" 
+                                         style="display: none; position: absolute; top: 100%; right: 0; background: var(--bg-card); 
+                                                border: 1px solid var(--bg-tertiary); border-radius: 8px; padding: 10px; 
+                                                box-shadow: var(--shadow-dark); z-index: 1000; min-width: 150px;">
+                                        {% if order.status.value == 'pending' %}
+                                        <button class="btn btn-success" style="width: 100%; margin-bottom: 5px; font-size: 12px;"
+                                                onclick="updateOrderStatus({{ order.id }}, 'confirmed')">
+                                            Confirm Order
+                                        </button>
+                                        {% endif %}
+                                        {% if order.status.value == 'confirmed' %}
+                                        <button class="btn btn-warning" style="width: 100%; margin-bottom: 5px; font-size: 12px;"
+                                                onclick="updateOrderStatus({{ order.id }}, 'in_preparation')">
+                                            Start Preparation
+                                        </button>
+                                        {% endif %}
+                                        {% if order.status.value == 'in_preparation' %}
+                                        <button class="btn btn-success" style="width: 100%; margin-bottom: 5px; font-size: 12px;"
+                                                onclick="updateOrderStatus({{ order.id }}, 'ready')">
+                                            Mark Ready
+                                        </button>
+                                        {% endif %}
+                                        {% if order.status.value == 'ready' %}
+                                        <button class="btn btn-success" style="width: 100%; margin-bottom: 5px; font-size: 12px;"
+                                                onclick="updateOrderStatus({{ order.id }}, 'delivered')">
+                                            Mark Delivered
+                                        </button>
+                                        {% endif %}
+                                        <button class="btn btn-danger" style="width: 100%; font-size: 12px;"
+                                                onclick="updateOrderStatus({{ order.id }}, 'cancelled')">
+                                            Cancel Order
+                                        </button>
+                                    </div>
+                                </div>
+                                {% endif %}
+                            </div>
+                        </td>
+                    </tr>
+                    {% endfor %}
+                </tbody>
+            </table>
+        </div>
+        
+        <!-- Pagination -->
+        {% if orders.pages > 1 %}
+        <div class="pagination">
+            {% if orders.has_prev %}
+                <a href="{{ url_for('orders', page=orders.prev_num, status=status_filter, type=order_type_filter) }}">&laquo; Prev</a>
+            {% endif %}
+            
+            {% for page_num in orders.iter_pages() %}
+                {% if page_num %}
+                    {% if page_num != orders.page %}
+                        <a href="{{ url_for('orders', page=page_num, status=status_filter, type=order_type_filter) }}">{{ page_num }}</a>
+                    {% else %}
+                        <a href="#" class="active">{{ page_num }}</a>
+                    {% endif %}
+                {% else %}
+                    <span>...</span>
+                {% endif %}
+            {% endfor %}
+            
+            {% if orders.has_next %}
+                <a href="{{ url_for('orders', page=orders.next_num, status=status_filter, type=order_type_filter) }}">Next &raquo;</a>
+            {% endif %}
+        </div>
+        {% endif %}
+    </div>
+</div>
+
+<style>
+.page-header {
+    display: flex;
+    justify-content: space-between;
+    align-items: center;
+    margin-bottom: 20px;
+}
+
+.header-actions {
+    display: flex;
+    gap: 10px;
+}
+
+.dropdown {
+    position: relative;
+}
+
+@media (max-width: 768px) {
+    .page-header {
+        flex-direction: column;
+        gap: 15px;
+        align-items: stretch;
+    }
+    
+    .header-actions {
+        justify-content: center;
+    }
+}
+</style>
+
+<script>
+function toggleStatusDropdown(orderId) {
+    const dropdown = document.getElementById(`status-dropdown-${orderId}`);
+    const isVisible = dropdown.style.display !== 'none';
+    
+    // Hide all dropdowns
+    document.querySelectorAll('.status-dropdown').forEach(d => {
+        d.style.display = 'none';
+    });
+    
+    // Show the clicked dropdown if it wasn't visible
+    if (!isVisible) {
+        dropdown.style.display = 'block';
+    }
+}
+
+function viewOrderDetails(orderId) {
+    // This would typically open a modal or navigate to a detailed view
+    showNotification(`Order details for Order ID: ${orderId}`, 'info');
+}
+
+// Close dropdowns when clicking outside
+document.addEventListener('click', function(e) {
+    if (!e.target.closest('.dropdown')) {
+        document.querySelectorAll('.status-dropdown').forEach(d => {
+            d.style.display = 'none';
+        });
+    }
+});
+</script>
+{% endblock %}

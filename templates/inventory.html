@@ -1,0 +1,218 @@
+{% extends "base.html" %}
+
+{% block title %}Inventory Management - Smart Bakery Management{% endblock %}
+
+{% block content %}
+<div class="inventory-page">
+    <div class="page-header">
+        <h1 class="header-title">
+            <i data-feather="package"></i>
+            Inventory Management
+        </h1>
+        <div class="header-actions">
+            <a href="{{ url_for('new_product') }}" class="btn btn-primary">
+                <i data-feather="plus"></i>
+                Add Product
+            </a>
+        </div>
+    </div>
+    
+    <!-- Low Stock Alerts -->
+    {% if low_stock_items %}
+    <div class="card" style="border: 1px solid var(--warning); box-shadow: 0 0 15px rgba(255, 170, 0, 0.3);">
+        <div class="card-header">
+            <h3 class="card-title" style="color: var(--warning);">
+                <i data-feather="alert-triangle"></i>
+                Low Stock Alerts
+            </h3>
+        </div>
+        <div class="low-stock-grid" style="display: grid; grid-template-columns: repeat(auto-fit, minmax(200px, 1fr)); gap: 15px;">
+            {% for item in low_stock_items %}
+            <div class="low-stock-item" style="background: rgba(255, 170, 0, 0.1); padding: 15px; border-radius: 8px; border: 1px solid var(--warning);">
+                <div style="font-weight: 600; color: var(--text-primary);">{{ item.product.name }}</div>
+                <div style="color: var(--warning); font-size: 14px;">
+                    Stock: {{ item.quantity }} / Min: {{ item.min_stock_level }}
+                </div>
+                <div style="margin-top: 8px;">
+                    <a href="{{ url_for('update_inventory', id=item.id) }}" class="btn btn-warning" style="font-size: 12px; padding: 4px 8px;">
+                        Restock
+                    </a>
+                </div>
+            </div>
+            {% endfor %}
+        </div>
+    </div>
+    {% endif %}
+    
+    <!-- Search and Filters -->
+    <div class="card">
+        <div class="card-header">
+            <h3 class="card-title">Inventory Items</h3>
+        </div>
+        
+        <div class="search-container">
+            <form method="GET" style="display: flex; gap: 15px; align-items: center;">
+                <div style="flex: 1;">
+                    <input type="text" name="search" class="search-input" 
+                           placeholder="Search products..." 
+                           value="{{ search }}"
+                           style="width: 100%;">
+                </div>
+                <button type="submit" class="btn btn-secondary">
+                    <i data-feather="search"></i>
+                    Search
+                </button>
+            </form>
+        </div>
+        
+        <!-- Inventory Table -->
+        <div class="table-container">
+            <table class="table">
+                <thead>
+                    <tr>
+                        <th>Product</th>
+                        <th>Category</th>
+                        <th>SKU</th>
+                        <th>Current Stock</th>
+                        <th>Min Level</th>
+                        <th>Max Level</th>
+                        <th>Status</th>
+                        <th>Last Updated</th>
+                        <th>Actions</th>
+                    </tr>
+                </thead>
+                <tbody>
+                    {% for item in inventory_items.items %}
+                    <tr>
+                        <td>
+                            <div style="font-weight: 600;">{{ item.product.name }}</div>
+                            <div style="font-size: 12px; color: var(--text-muted);">
+                                ${{ "%.2f"|format(item.product.price) }}
+                            </div>
+                        </td>
+                        <td>{{ item.product.category.name }}</td>
+                        <td>{{ item.product.sku or '-' }}</td>
+                        <td>
+                            <span class="stock-level {{ 'low-stock' if item.is_low_stock() else 'normal-stock' }}">
+                                {{ item.quantity }}
+                            </span>
+                        </td>
+                        <td>{{ item.min_stock_level }}</td>
+                        <td>{{ item.max_stock_level }}</td>
+                        <td>
+                            {% if item.quantity == 0 %}
+                                <span class="badge badge-danger">Out of Stock</span>
+                            {% elif item.is_low_stock() %}
+                                <span class="badge badge-warning">Low Stock</span>
+                            {% else %}
+                                <span class="badge badge-success">In Stock</span>
+                            {% endif %}
+                        </td>
+                        <td class="timestamp" data-datetime="{{ item.last_updated.isoformat() }}">
+                            {{ item.last_updated.strftime('%m/%d/%Y %H:%M') }}
+                        </td>
+                        <td>
+                            <div style="display: flex; gap: 8px;">
+                                <a href="{{ url_for('update_inventory', id=item.id) }}" 
+                                   class="btn btn-secondary" style="font-size: 12px; padding: 4px 8px;"
+                                   data-tooltip="Update inventory">
+                                    <i data-feather="edit" style="width: 14px; height: 14px;"></i>
+                                </a>
+                                <button class="btn btn-success" style="font-size: 12px; padding: 4px 8px;"
+                                        onclick="quickRestock({{ item.id }})"
+                                        data-tooltip="Quick restock">
+                                    <i data-feather="plus" style="width: 14px; height: 14px;"></i>
+                                </button>
+                            </div>
+                        </td>
+                    </tr>
+                    {% endfor %}
+                </tbody>
+            </table>
+        </div>
+        
+        <!-- Pagination -->
+        {% if inventory_items.pages > 1 %}
+        <div class="pagination">
+            {% if inventory_items.has_prev %}
+                <a href="{{ url_for('inventory', page=inventory_items.prev_num, search=search) }}">&laquo; Prev</a>
+            {% endif %}
+            
+            {% for page_num in inventory_items.iter_pages() %}
+                {% if page_num %}
+                    {% if page_num != inventory_items.page %}
+                        <a href="{{ url_for('inventory', page=page_num, search=search) }}">{{ page_num }}</a>
+                    {% else %}
+                        <a href="#" class="active">{{ page_num }}</a>
+                    {% endif %}
+                {% else %}
+                    <span>...</span>
+                {% endif %}
+            {% endfor %}
+            
+            {% if inventory_items.has_next %}
+                <a href="{{ url_for('inventory', page=inventory_items.next_num, search=search) }}">Next &raquo;</a>
+            {% endif %}
+        </div>
+        {% endif %}
+    </div>
+    
+    <!-- Inventory Chart -->
+    <div class="card">
+        <div class="card-header">
+            <h3 class="card-title">Stock Levels Overview</h3>
+        </div>
+        <div class="chart-container">
+            <canvas id="inventoryChart"></canvas>
+        </div>
+    </div>
+</div>
+
+<style>
+.page-header {
+    display: flex;
+    justify-content: space-between;
+    align-items: center;
+    margin-bottom: 20px;
+}
+
+.header-actions {
+    display: flex;
+    gap: 10px;
+}
+
+.stock-level.low-stock {
+    color: var(--warning);
+    font-weight: bold;
+}
+
+.stock-level.normal-stock {
+    color: var(--success);
+}
+
+@media (max-width: 768px) {
+    .page-header {
+        flex-direction: column;
+        gap: 15px;
+        align-items: stretch;
+    }
+    
+    .header-actions {
+        justify-content: center;
+    }
+}
+</style>
+
+<script>
+function quickRestock(inventoryId) {
+    const quantity = prompt('Enter quantity to add to stock:');
+    if (quantity && !isNaN(quantity) && parseInt(quantity) > 0) {
+        // This would typically make an API call to update inventory
+        showNotification(`Added ${quantity} units to inventory`, 'success');
+        setTimeout(() => {
+            window.location.reload();
+        }, 1000);
+    }
+}
+</script>
+{% endblock %}

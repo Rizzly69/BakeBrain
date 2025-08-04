@@ -1,0 +1,253 @@
+{% extends "base.html" %}
+
+{% block title %}Dashboard - Smart Bakery Management{% endblock %}
+
+{% block content %}
+<div class="dashboard">
+    <h1 class="header-title">
+        <i data-feather="grid"></i>
+        Dashboard
+        {% if current_user.role.name == 'admin' or current_user.role.name == 'manager' %}
+            <button class="btn btn-secondary refresh-insights-btn" style="margin-left: 20px; font-size: 14px;">
+                <i data-feather="refresh-cw" style="width: 16px; height: 16px;"></i>
+                Refresh Insights
+            </button>
+        {% endif %}
+    </h1>
+    
+    {% if current_user.role.name in ['admin', 'manager'] %}
+        <!-- Admin/Manager Dashboard -->
+        <div class="stats-grid">
+            <div class="stat-card">
+                <div class="stat-value">{{ stats.total_orders or 0 }}</div>
+                <div class="stat-label">Total Orders</div>
+            </div>
+            <div class="stat-card">
+                <div class="stat-value">{{ stats.pending_orders or 0 }}</div>
+                <div class="stat-label">Pending Orders</div>
+            </div>
+            <div class="stat-card">
+                <div class="stat-value">{{ stats.total_customers or 0 }}</div>
+                <div class="stat-label">Total Customers</div>
+            </div>
+            <div class="stat-card">
+                <div class="stat-value">{{ stats.low_stock_items or 0 }}</div>
+                <div class="stat-label">Low Stock Items</div>
+            </div>
+        </div>
+        
+        <div style="display: grid; grid-template-columns: 1fr 1fr; gap: 20px; margin-bottom: 20px;">
+            <!-- Revenue Chart -->
+            <div class="card">
+                <div class="card-header">
+                    <h3 class="card-title">Revenue Trend</h3>
+                </div>
+                <div class="chart-container">
+                    <canvas id="revenueTrendChart"></canvas>
+                </div>
+            </div>
+            
+            <!-- Orders Status Chart -->
+            <div class="card">
+                <div class="card-header">
+                    <h3 class="card-title">Order Status Distribution</h3>
+                </div>
+                <div class="chart-container">
+                    <canvas id="ordersChart"></canvas>
+                </div>
+            </div>
+        </div>
+        
+        <!-- AI Insights -->
+        {% if ai_insights %}
+        <div class="card ai-insights-container">
+            <div class="card-header">
+                <h3 class="card-title">🤖 AI Insights</h3>
+            </div>
+            {% for insight in ai_insights %}
+            <div class="ai-insight">
+                <div class="ai-insight-title">{{ insight.title }}</div>
+                <div class="ai-insight-description">{{ insight.description }}</div>
+                <div class="confidence-score">
+                    Confidence: {{ (insight.confidence_score * 100)|round }}%
+                </div>
+            </div>
+            {% endfor %}
+        </div>
+        {% endif %}
+        
+        <!-- Recent Orders -->
+        {% if recent_orders %}
+        <div class="card">
+            <div class="card-header">
+                <h3 class="card-title">Recent Orders</h3>
+                <a href="{{ url_for('orders') }}" class="btn btn-secondary">View All</a>
+            </div>
+            <div class="table-container">
+                <table class="table">
+                    <thead>
+                        <tr>
+                            <th>Order #</th>
+                            <th>Customer</th>
+                            <th>Type</th>
+                            <th>Amount</th>
+                            <th>Status</th>
+                            <th>Date</th>
+                        </tr>
+                    </thead>
+                    <tbody>
+                        {% for order in recent_orders %}
+                        <tr>
+                            <td>{{ order.order_number }}</td>
+                            <td>{{ order.customer.first_name }} {{ order.customer.last_name }}</td>
+                            <td>
+                                <span class="badge badge-info">{{ order.order_type.value.title() }}</span>
+                            </td>
+                            <td>${{ "%.2f"|format(order.total_amount) }}</td>
+                            <td>
+                                <span class="badge badge-{{ 'success' if order.status.value == 'delivered' else 'warning' if order.status.value == 'pending' else 'info' }}">
+                                    {{ order.status.value.replace('_', ' ').title() }}
+                                </span>
+                            </td>
+                            <td class="timestamp" data-datetime="{{ order.created_at.isoformat() }}">
+                                {{ order.created_at.strftime('%m/%d/%Y %H:%M') }}
+                            </td>
+                        </tr>
+                        {% endfor %}
+                    </tbody>
+                </table>
+            </div>
+        </div>
+        {% endif %}
+        
+    {% elif current_user.role.name == 'staff' %}
+        <!-- Staff Dashboard -->
+        <div class="stats-grid">
+            <div class="stat-card">
+                <div class="stat-value">{{ active_orders|length if active_orders else 0 }}</div>
+                <div class="stat-label">Active Orders</div>
+            </div>
+            {% if schedule %}
+            <div class="stat-card">
+                <div class="stat-value">{{ schedule.start_time.strftime('%H:%M') }}</div>
+                <div class="stat-label">Shift Start</div>
+            </div>
+            <div class="stat-card">
+                <div class="stat-value">{{ schedule.end_time.strftime('%H:%M') }}</div>
+                <div class="stat-label">Shift End</div>
+            </div>
+            {% endif %}
+        </div>
+        
+        {% if schedule %}
+        <div class="card">
+            <div class="card-header">
+                <h3 class="card-title">Today's Schedule</h3>
+            </div>
+            <p><strong>Position:</strong> {{ schedule.position or 'General' }}</p>
+            <p><strong>Time:</strong> {{ schedule.start_time.strftime('%H:%M') }} - {{ schedule.end_time.strftime('%H:%M') }}</p>
+            {% if schedule.notes %}
+            <p><strong>Notes:</strong> {{ schedule.notes }}</p>
+            {% endif %}
+        </div>
+        {% endif %}
+        
+        {% if active_orders %}
+        <div class="card">
+            <div class="card-header">
+                <h3 class="card-title">Active Orders</h3>
+            </div>
+            <div class="table-container">
+                <table class="table">
+                    <thead>
+                        <tr>
+                            <th>Order #</th>
+                            <th>Customer</th>
+                            <th>Status</th>
+                            <th>Total</th>
+                            <th>Actions</th>
+                        </tr>
+                    </thead>
+                    <tbody>
+                        {% for order in active_orders %}
+                        <tr data-order-id="{{ order.id }}">
+                            <td>{{ order.order_number }}</td>
+                            <td>{{ order.customer.first_name }} {{ order.customer.last_name }}</td>
+                            <td>
+                                <span class="status-badge badge badge-{{ 'info' if order.status.value in ['confirmed', 'in_preparation'] else 'warning' }}">
+                                    {{ order.status.value.replace('_', ' ').title() }}
+                                </span>
+                            </td>
+                            <td>${{ "%.2f"|format(order.total_amount) }}</td>
+                            <td>
+                                {% if order.status.value == 'confirmed' %}
+                                <button class="btn btn-secondary" onclick="updateOrderStatus({{ order.id }}, 'in_preparation')">
+                                    Start Preparation
+                                </button>
+                                {% elif order.status.value == 'in_preparation' %}
+                                <button class="btn btn-success" onclick="updateOrderStatus({{ order.id }}, 'ready')">
+                                    Mark Ready
+                                </button>
+                                {% endif %}
+                            </td>
+                        </tr>
+                        {% endfor %}
+                    </tbody>
+                </table>
+            </div>
+        </div>
+        {% endif %}
+        
+    {% else %}
+        <!-- Customer Dashboard -->
+        <div class="card">
+            <div class="card-header">
+                <h3 class="card-title">Welcome, {{ current_user.first_name }}!</h3>
+                <a href="{{ url_for('new_order') }}" class="btn btn-primary">Place New Order</a>
+            </div>
+            <p>Track your orders and browse our delicious bakery items.</p>
+        </div>
+        
+        {% if customer_orders %}
+        <div class="card">
+            <div class="card-header">
+                <h3 class="card-title">Your Recent Orders</h3>
+                <a href="{{ url_for('orders') }}" class="btn btn-secondary">View All Orders</a>
+            </div>
+            <div class="table-container">
+                <table class="table">
+                    <thead>
+                        <tr>
+                            <th>Order #</th>
+                            <th>Type</th>
+                            <th>Amount</th>
+                            <th>Status</th>
+                            <th>Date</th>
+                        </tr>
+                    </thead>
+                    <tbody>
+                        {% for order in customer_orders %}
+                        <tr>
+                            <td>{{ order.order_number }}</td>
+                            <td>
+                                <span class="badge badge-info">{{ order.order_type.value.title() }}</span>
+                            </td>
+                            <td>${{ "%.2f"|format(order.total_amount) }}</td>
+                            <td>
+                                <span class="badge badge-{{ 'success' if order.status.value == 'delivered' else 'warning' if order.status.value == 'pending' else 'info' }}">
+                                    {{ order.status.value.replace('_', ' ').title() }}
+                                </span>
+                            </td>
+                            <td class="timestamp" data-datetime="{{ order.created_at.isoformat() }}">
+                                {{ order.created_at.strftime('%m/%d/%Y %H:%M') }}
+                            </td>
+                        </tr>
+                        {% endfor %}
+                    </tbody>
+                </table>
+            </div>
+        </div>
+        {% endif %}
+    {% endif %}
+</div>
+{% endblock %}

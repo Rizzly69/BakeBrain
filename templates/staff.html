@@ -1,0 +1,349 @@
+{% extends "base.html" %}
+
+{% block title %}Staff Management - Smart Bakery Management{% endblock %}
+
+{% block content %}
+<div class="staff-page">
+    <div class="page-header">
+        <h1 class="header-title">
+            <i data-feather="briefcase"></i>
+            Staff Management
+        </h1>
+        <div class="header-actions">
+            <a href="#" class="btn btn-primary" onclick="showAddStaffModal()">
+                <i data-feather="user-plus"></i>
+                Add Staff Member
+            </a>
+            <a href="#" class="btn btn-secondary" onclick="showScheduleModal()">
+                <i data-feather="calendar"></i>
+                Manage Schedules
+            </a>
+        </div>
+    </div>
+    
+    <!-- Staff Stats -->
+    <div class="stats-grid" style="margin-bottom: 20px;">
+        <div class="stat-card">
+            <div class="stat-value">{{ staff_members.total }}</div>
+            <div class="stat-label">Total Staff</div>
+        </div>
+        <div class="stat-card">
+            <div class="stat-value">
+                {{ staff_members.items|selectattr('is_active', 'equalto', true)|list|length }}
+            </div>
+            <div class="stat-label">Active Staff</div>
+        </div>
+        <div class="stat-card">
+            <div class="stat-value">{{ today_schedule|length }}</div>
+            <div class="stat-label">Working Today</div>
+        </div>
+        <div class="stat-card">
+            <div class="stat-value">
+                {% set positions = today_schedule|map(attribute='position')|unique|list %}
+                {{ positions|length }}
+            </div>
+            <div class="stat-label">Positions Covered</div>
+        </div>
+    </div>
+    
+    <!-- Today's Schedule -->
+    {% if today_schedule %}
+    <div class="card">
+        <div class="card-header">
+            <h3 class="card-title">
+                <i data-feather="clock"></i>
+                Today's Schedule
+            </h3>
+            <div style="color: var(--text-muted);">
+                {{ today_schedule[0].date.strftime('%A, %B %d, %Y') }}
+            </div>
+        </div>
+        
+        <div class="schedule-grid" style="display: grid; grid-template-columns: repeat(auto-fit, minmax(300px, 1fr)); gap: 15px;">
+            {% for schedule in today_schedule %}
+            <div class="schedule-card" style="background: var(--bg-tertiary); border-radius: 8px; padding: 15px; border: 1px solid var(--bg-secondary);">
+                <div style="display: flex; justify-content: between; align-items: start; margin-bottom: 10px;">
+                    <div>
+                        <div style="font-weight: 600; color: var(--text-primary);">
+                            {{ schedule.staff_member.first_name }} {{ schedule.staff_member.last_name }}
+                        </div>
+                        <div style="color: var(--neon-cyan); font-size: 14px;">
+                            {{ schedule.position or 'General Staff' }}
+                        </div>
+                    </div>
+                    <div style="text-align: right;">
+                        <div style="color: var(--success); font-weight: 600;">
+                            {{ schedule.start_time.strftime('%H:%M') }} - {{ schedule.end_time.strftime('%H:%M') }}
+                        </div>
+                        <div style="color: var(--text-muted); font-size: 12px;">
+                            {% set duration = ((schedule.end_time.hour * 60 + schedule.end_time.minute) - (schedule.start_time.hour * 60 + schedule.start_time.minute)) / 60 %}
+                            {{ "%.1f"|format(duration) }} hours
+                        </div>
+                    </div>
+                </div>
+                
+                {% if schedule.notes %}
+                <div style="background: rgba(0, 255, 255, 0.1); padding: 8px; border-radius: 4px; border-left: 3px solid var(--neon-cyan); font-size: 14px; color: var(--text-secondary);">
+                    {{ schedule.notes }}
+                </div>
+                {% endif %}
+            </div>
+            {% endfor %}
+        </div>
+    </div>
+    {% endif %}
+    
+    <!-- Staff Members -->
+    <div class="card">
+        <div class="card-header">
+            <h3 class="card-title">Staff Members</h3>
+            <div style="display: flex; gap: 10px;">
+                <span class="badge badge-info">{{ staff_members.total }} Total</span>
+                <span class="badge badge-success">
+                    {{ staff_members.items|selectattr('is_active', 'equalto', true)|list|length }} Active
+                </span>
+            </div>
+        </div>
+        
+        <div class="table-container">
+            <table class="table">
+                <thead>
+                    <tr>
+                        <th>Staff Member</th>
+                        <th>Contact</th>
+                        <th>Schedule Status</th>
+                        <th>Recent Activity</th>
+                        <th>Joined</th>
+                        <th>Status</th>
+                        <th>Actions</th>
+                    </tr>
+                </thead>
+                <tbody>
+                    {% for staff in staff_members.items %}
+                    <tr>
+                        <td>
+                            <div style="font-weight: 600; color: var(--text-primary);">
+                                {{ staff.first_name }} {{ staff.last_name }}
+                            </div>
+                            <div style="font-size: 12px; color: var(--text-muted);">
+                                ID: {{ staff.id }}
+                            </div>
+                        </td>
+                        <td>
+                            <div style="color: var(--text-secondary);">{{ staff.email }}</div>
+                            {% if staff.phone %}
+                            <div style="font-size: 12px; color: var(--text-muted);">{{ staff.phone }}</div>
+                            {% endif %}
+                        </td>
+                        <td>
+                            {% set today_staff_schedule = today_schedule|selectattr('staff_id', 'equalto', staff.id)|first %}
+                            {% if today_staff_schedule %}
+                                <div style="color: var(--success); font-weight: 600;">
+                                    <i data-feather="check-circle" style="width: 14px; height: 14px; margin-right: 5px;"></i>
+                                    Working Today
+                                </div>
+                                <div style="font-size: 12px; color: var(--text-muted);">
+                                    {{ today_staff_schedule.start_time.strftime('%H:%M') }} - {{ today_staff_schedule.end_time.strftime('%H:%M') }}
+                                </div>
+                            {% else %}
+                                <div style="color: var(--text-muted);">
+                                    <i data-feather="x-circle" style="width: 14px; height: 14px; margin-right: 5px;"></i>
+                                    Off Today
+                                </div>
+                            {% endif %}
+                        </td>
+                        <td>
+                            {% if staff.last_login %}
+                            <div class="timestamp" data-datetime="{{ staff.last_login.isoformat() }}">
+                                {{ staff.last_login.strftime('%m/%d/%Y %H:%M') }}
+                            </div>
+                            {% else %}
+                            <span style="color: var(--text-muted);">Never logged in</span>
+                            {% endif %}
+                        </td>
+                        <td class="timestamp" data-datetime="{{ staff.created_at.isoformat() }}">
+                            {{ staff.created_at.strftime('%m/%d/%Y') }}
+                        </td>
+                        <td>
+                            <span class="badge badge-{{ 'success' if staff.is_active else 'danger' }}">
+                                {{ 'Active' if staff.is_active else 'Inactive' }}
+                            </span>
+                        </td>
+                        <td>
+                            <div style="display: flex; gap: 5px;">
+                                <button class="btn btn-secondary" style="font-size: 12px; padding: 4px 8px;"
+                                        onclick="viewStaffDetails({{ staff.id }})"
+                                        data-tooltip="View details">
+                                    <i data-feather="eye" style="width: 14px; height: 14px;"></i>
+                                </button>
+                                <button class="btn btn-primary" style="font-size: 12px; padding: 4px 8px;"
+                                        onclick="editStaff({{ staff.id }})"
+                                        data-tooltip="Edit staff">
+                                    <i data-feather="edit" style="width: 14px; height: 14px;"></i>
+                                </button>
+                                <button class="btn btn-success" style="font-size: 12px; padding: 4px 8px;"
+                                        onclick="manageSchedule({{ staff.id }})"
+                                        data-tooltip="Manage schedule">
+                                    <i data-feather="calendar" style="width: 14px; height: 14px;"></i>
+                                </button>
+                            </div>
+                        </td>
+                    </tr>
+                    {% endfor %}
+                </tbody>
+            </table>
+        </div>
+        
+        <!-- Pagination -->
+        {% if staff_members.pages > 1 %}
+        <div class="pagination">
+            {% if staff_members.has_prev %}
+                <a href="{{ url_for('staff', page=staff_members.prev_num) }}">&laquo; Prev</a>
+            {% endif %}
+            
+            {% for page_num in staff_members.iter_pages() %}
+                {% if page_num %}
+                    {% if page_num != staff_members.page %}
+                        <a href="{{ url_for('staff', page=page_num) }}">{{ page_num }}</a>
+                    {% else %}
+                        <a href="#" class="active">{{ page_num }}</a>
+                    {% endif %}
+                {% else %}
+                    <span>...</span>
+                {% endif %}
+            {% endfor %}
+            
+            {% if staff_members.has_next %}
+                <a href="{{ url_for('staff', page=staff_members.next_num) }}">Next &raquo;</a>
+            {% endif %}
+        </div>
+        {% endif %}
+    </div>
+    
+    <!-- Weekly Schedule Overview -->
+    <div class="card">
+        <div class="card-header">
+            <h3 class="card-title">Weekly Schedule Overview</h3>
+            <div style="display: flex; gap: 10px;">
+                <button class="btn btn-secondary" onclick="previousWeek()">
+                    <i data-feather="chevron-left"></i>
+                    Previous Week
+                </button>
+                <button class="btn btn-secondary" onclick="nextWeek()">
+                    Next Week
+                    <i data-feather="chevron-right"></i>
+                </button>
+            </div>
+        </div>
+        
+        <div style="overflow-x: auto;">
+            <div class="schedule-calendar" style="min-width: 800px;">
+                <div style="display: grid; grid-template-columns: 150px repeat(7, 1fr); gap: 1px; background: var(--bg-tertiary);">
+                    <!-- Header -->
+                    <div style="background: var(--bg-card); padding: 10px; font-weight: 600; text-align: center;">Staff</div>
+                    <div style="background: var(--bg-card); padding: 10px; font-weight: 600; text-align: center;">Mon</div>
+                    <div style="background: var(--bg-card); padding: 10px; font-weight: 600; text-align: center;">Tue</div>
+                    <div style="background: var(--bg-card); padding: 10px; font-weight: 600; text-align: center;">Wed</div>
+                    <div style="background: var(--bg-card); padding: 10px; font-weight: 600; text-align: center;">Thu</div>
+                    <div style="background: var(--bg-card); padding: 10px; font-weight: 600; text-align: center;">Fri</div>
+                    <div style="background: var(--bg-card); padding: 10px; font-weight: 600; text-align: center;">Sat</div>
+                    <div style="background: var(--bg-card); padding: 10px; font-weight: 600; text-align: center;">Sun</div>
+                    
+                    <!-- Staff rows -->
+                    {% for staff in staff_members.items[:5] %}
+                    <div style="background: var(--bg-card); padding: 10px; font-weight: 600; color: var(--text-primary);">
+                        {{ staff.first_name }} {{ staff.last_name }}
+                    </div>
+                    {% for day in range(7) %}
+                    <div style="background: var(--bg-secondary); padding: 10px; min-height: 60px; text-align: center;">
+                        <!-- This would be populated with actual schedule data -->
+                        <div style="font-size: 12px; color: var(--text-muted);">
+                            {% if day % 3 == 0 %}
+                            <div style="background: rgba(0, 255, 255, 0.2); border-radius: 4px; padding: 2px 4px; margin: 1px 0;">
+                                09:00-17:00
+                            </div>
+                            {% elif day % 5 == 0 %}
+                            <div style="background: rgba(255, 170, 0, 0.2); border-radius: 4px; padding: 2px 4px; margin: 1px 0;">
+                                14:00-22:00
+                            </div>
+                            {% else %}
+                            <span style="color: var(--text-muted);">Off</span>
+                            {% endif %}
+                        </div>
+                    </div>
+                    {% endfor %}
+                    {% endfor %}
+                </div>
+            </div>
+        </div>
+    </div>
+</div>
+
+<style>
+.page-header {
+    display: flex;
+    justify-content: space-between;
+    align-items: center;
+    margin-bottom: 20px;
+}
+
+.header-actions {
+    display: flex;
+    gap: 10px;
+}
+
+@media (max-width: 768px) {
+    .page-header {
+        flex-direction: column;
+        gap: 15px;
+        align-items: stretch;
+    }
+    
+    .header-actions {
+        justify-content: center;
+        flex-wrap: wrap;
+    }
+    
+    .schedule-grid {
+        grid-template-columns: 1fr !important;
+    }
+}
+</style>
+
+<script>
+function viewStaffDetails(staffId) {
+    showNotification(`Viewing details for Staff ID: ${staffId}`, 'info');
+    // This would typically open a modal or navigate to a detailed view
+}
+
+function editStaff(staffId) {
+    showNotification(`Editing Staff ID: ${staffId}`, 'info');
+    // This would typically open an edit form modal
+}
+
+function manageSchedule(staffId) {
+    showNotification(`Managing schedule for Staff ID: ${staffId}`, 'info');
+    // This would typically open a schedule management interface
+}
+
+function showAddStaffModal() {
+    showNotification('Add staff functionality would open here', 'info');
+    // This would typically open a modal with a staff creation form
+}
+
+function showScheduleModal() {
+    showNotification('Schedule management interface would open here', 'info');
+    // This would typically open a comprehensive schedule management modal
+}
+
+function previousWeek() {
+    showNotification('Loading previous week schedule...', 'info');
+    // This would update the calendar view
+}
+
+function nextWeek() {
+    showNotification('Loading next week schedule...', 'info');
+    // This would update the calendar view
+}
+</script>
+{% endblock %}

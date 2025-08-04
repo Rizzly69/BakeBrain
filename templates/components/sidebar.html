@@ -1,0 +1,90 @@
+<div class="sidebar">
+    <div class="sidebar-header">
+        <div class="logo">
+            <i data-feather="home"></i>
+            Smart Bakery
+        </div>
+    </div>
+    
+    <nav class="nav-menu">
+        <ul>
+            <li class="nav-item">
+                <a href="{{ url_for('dashboard') }}" class="nav-link {{ 'active' if request.endpoint == 'dashboard' }}">
+                    <i data-feather="grid" class="nav-icon"></i>
+                    Dashboard
+                </a>
+            </li>
+            
+            {% if current_user.role.name in ['admin', 'manager', 'staff'] %}
+            <li class="nav-item">
+                <a href="{{ url_for('orders') }}" class="nav-link {{ 'active' if request.endpoint in ['orders', 'new_order'] }}">
+                    <i data-feather="shopping-cart" class="nav-icon"></i>
+                    Orders
+                </a>
+            </li>
+            {% endif %}
+            
+            {% if current_user.role.name in ['admin', 'manager'] %}
+            <li class="nav-item">
+                <a href="{{ url_for('inventory') }}" class="nav-link {{ 'active' if request.endpoint in ['inventory', 'update_inventory'] }}">
+                    <i data-feather="package" class="nav-icon"></i>
+                    Inventory
+                </a>
+            </li>
+            
+            <li class="nav-item">
+                <a href="{{ url_for('products') }}" class="nav-link {{ 'active' if request.endpoint in ['products', 'new_product'] }}">
+                    <i data-feather="coffee" class="nav-icon"></i>
+                    Products
+                </a>
+            </li>
+            {% endif %}
+            
+            <li class="nav-item">
+                <a href="{{ url_for('catering') }}" class="nav-link {{ 'active' if request.endpoint == 'catering' }}">
+                    <i data-feather="users" class="nav-icon"></i>
+                    Catering
+                </a>
+            </li>
+            
+            {% if current_user.role.name in ['admin', 'manager', 'staff'] %}
+            <li class="nav-item">
+                <a href="{{ url_for('customers') }}" class="nav-link {{ 'active' if request.endpoint == 'customers' }}">
+                    <i data-feather="user" class="nav-icon"></i>
+                    Customers
+                </a>
+            </li>
+            {% endif %}
+            
+            {% if current_user.role.name in ['admin', 'manager'] %}
+            <li class="nav-item">
+                <a href="{{ url_for('staff') }}" class="nav-link {{ 'active' if request.endpoint == 'staff' }}">
+                    <i data-feather="briefcase" class="nav-icon"></i>
+                    Staff
+                </a>
+            </li>
+            
+            <li class="nav-item">
+                <a href="{{ url_for('reports') }}" class="nav-link {{ 'active' if request.endpoint == 'reports' }}">
+                    <i data-feather="bar-chart-2" class="nav-icon"></i>
+                    Reports
+                </a>
+            </li>
+            {% endif %}
+            
+            <li class="nav-item" style="margin-top: 20px; border-top: 1px solid var(--bg-tertiary); padding-top: 20px;">
+                <a href="{{ url_for('profile') }}" class="nav-link {{ 'active' if request.endpoint == 'profile' }}">
+                    <i data-feather="settings" class="nav-icon"></i>
+                    Profile
+                </a>
+            </li>
+            
+            <li class="nav-item">
+                <a href="{{ url_for('logout') }}" class="nav-link">
+                    <i data-feather="log-out" class="nav-icon"></i>
+                    Logout
+                </a>
+            </li>
+        </ul>
+    </nav>
+</div>

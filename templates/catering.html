@@ -1,0 +1,271 @@
+{% extends "base.html" %}
+
+{% block title %}Catering Orders - Smart Bakery Management{% endblock %}
+
+{% block content %}
+<div class="catering-page">
+    <div class="page-header">
+        <h1 class="header-title">
+            <i data-feather="users"></i>
+            Catering Management
+        </h1>
+        <div class="header-actions">
+            {% if current_user.role.name in ['admin', 'manager', 'staff'] %}
+            <a href="{{ url_for('new_order') }}?type=catering" class="btn btn-primary">
+                <i data-feather="plus"></i>
+                New Catering Order
+            </a>
+            {% endif %}
+        </div>
+    </div>
+    
+    <!-- Catering Stats -->
+    <div class="stats-grid" style="margin-bottom: 20px;">
+        <div class="stat-card">
+            <div class="stat-value">{{ catering_orders.total }}</div>
+            <div class="stat-label">Total Catering Orders</div>
+        </div>
+        <div class="stat-card">
+            <div class="stat-value">
+                {{ catering_orders.items|selectattr('status', 'equalto', 'confirmed')|list|length }}
+            </div>
+            <div class="stat-label">Upcoming Events</div>
+        </div>
+        <div class="stat-card">
+            <div class="stat-value">
+                {% set total_revenue = catering_orders.items|selectattr('status', 'ne', 'cancelled')|sum(attribute='total_amount') %}
+                ${{ "%.0f"|format(total_revenue) }}
+            </div>
+            <div class="stat-label">Total Revenue</div>
+        </div>
+        <div class="stat-card">
+            <div class="stat-value">
+                {% set total_guests = catering_orders.items|selectattr('guest_count')|sum(attribute='guest_count') %}
+                {{ total_guests or 0 }}
+            </div>
+            <div class="stat-label">Total Guests Served</div>
+        </div>
+    </div>
+    
+    <!-- Quick Filters -->
+    <div class="card">
+        <div class="card-header">
+            <h3 class="card-title">Quick Filters</h3>
+        </div>
+        
+        <div style="display: flex; gap: 10px; flex-wrap: wrap;">
+            <a href="{{ url_for('catering') }}" class="btn btn-secondary">
+                All Orders
+            </a>
+            <a href="{{ url_for('catering') }}?status=confirmed" class="btn btn-secondary">
+                Upcoming Events
+            </a>
+            <a href="{{ url_for('catering') }}?status=pending" class="btn btn-warning">
+                Pending Approval
+            </a>
+            <a href="{{ url_for('catering') }}?status=in_preparation" class="btn btn-info">
+                In Preparation
+            </a>
+            <a href="{{ url_for('catering') }}?date_range=this_week" class="btn btn-success">
+                This Week
+            </a>
+        </div>
+    </div>
+    
+    <!-- Catering Orders -->
+    <div class="card">
+        <div class="card-header">
+            <h3 class="card-title">Catering Orders</h3>
+            <div style="display: flex; gap: 10px;">
+                <span class="badge badge-info">{{ catering_orders.total }} Total Orders</span>
+            </div>
+        </div>
+        
+        {% if catering_orders.items %}
+        <div class="catering-grid" style="display: grid; gap: 20px;">
+            {% for order in catering_orders.items %}
+            <div class="catering-card" style="background: var(--bg-tertiary); border-radius: 12px; padding: 20px; border: 1px solid var(--bg-secondary); transition: all 0.3s ease;">
+                <div style="display: flex; justify-content: between; align-items: start; margin-bottom: 15px;">
+                    <div style="flex: 1;">
+                        <div style="display: flex; align-items: center; gap: 10px; margin-bottom: 8px;">
+                            <h4 style="margin: 0; color: var(--text-primary); font-size: 18px;">
+                                Order #{{ order.order_number }}
+                            </h4>
+                            <span class="badge badge-{{ 'success' if order.status.value == 'delivered' else 'danger' if order.status.value == 'cancelled' else 'warning' if order.status.value == 'pending' else 'info' }}">
+                                {{ order.status.value.replace('_', ' ').title() }}
+                            </span>
+                        </div>
+                        
+                        <div style="color: var(--text-secondary); margin-bottom: 5px;">
+                            <i data-feather="user" style="width: 14px; height: 14px; margin-right: 5px;"></i>
+                            {% if current_user.role.name in ['admin', 'manager', 'staff'] %}
+                                {{ order.customer.first_name }} {{ order.customer.last_name }}
+                            {% else %}
+                                Your Event
+                            {% endif %}
+                        </div>
+                        
+                        {% if order.event_date %}
+                        <div style="color: var(--neon-cyan); font-weight: 600; margin-bottom: 5px;">
+                            <i data-feather="calendar" style="width: 14px; height: 14px; margin-right: 5px;"></i>
+                            {{ order.event_date.strftime('%B %d, %Y at %I:%M %p') }}
+                        </div>
+                        {% endif %}
+                        
+                        {% if order.guest_count %}
+                        <div style="color: var(--text-secondary); margin-bottom: 5px;">
+                            <i data-feather="users" style="width: 14px; height: 14px; margin-right: 5px;"></i>
+                            {{ order.guest_count }} guests
+                        </div>
+                        {% endif %}
+                    </div>
+                    
+                    <div style="text-align: right;">
+                        <div style="font-size: 24px; font-weight: bold; color: var(--success);">
+                            ${{ "%.2f"|format(order.total_amount) }}
+                        </div>
+                        <div style="font-size: 12px; color: var(--text-muted);">
+                            {{ order.items|length if order.items else 0 }} item{{ 's' if order.items|length != 1 else '' }}
+                        </div>
+                    </div>
+                </div>
+                
+                {% if order.delivery_address %}
+                <div style="margin-bottom: 10px; color: var(--text-secondary);">
+                    <i data-feather="map-pin" style="width: 14px; height: 14px; margin-right: 5px;"></i>
+                    {{ order.delivery_address[:50] }}{{ '...' if order.delivery_address|length > 50 else '' }}
+                </div>
+                {% endif %}
+                
+                {% if order.setup_requirements %}
+                <div style="margin-bottom: 15px; background: rgba(0, 255, 255, 0.1); padding: 10px; border-radius: 8px; border-left: 3px solid var(--neon-cyan);">
+                    <div style="font-weight: 600; color: var(--neon-cyan); margin-bottom: 5px;">Setup Requirements:</div>
+                    <div style="color: var(--text-secondary); font-size: 14px;">
+                        {{ order.setup_requirements[:100] }}{{ '...' if order.setup_requirements|length > 100 else '' }}
+                    </div>
+                </div>
+                {% endif %}
+                
+                {% if order.special_instructions %}
+                <div style="margin-bottom: 15px; background: rgba(255, 170, 0, 0.1); padding: 10px; border-radius: 8px; border-left: 3px solid var(--warning);">
+                    <div style="font-weight: 600; color: var(--warning); margin-bottom: 5px;">Special Instructions:</div>
+                    <div style="color: var(--text-secondary); font-size: 14px;">
+                        {{ order.special_instructions[:100] }}{{ '...' if order.special_instructions|length > 100 else '' }}
+                    </div>
+                </div>
+                {% endif %}
+                
+                <div style="display: flex; justify-content: between; align-items: center; margin-top: 15px; padding-top: 15px; border-top: 1px solid var(--bg-secondary);">
+                    <div style="color: var(--text-muted); font-size: 12px;">
+                        <i data-feather="clock" style="width: 12px; height: 12px; margin-right: 5px;"></i>
+                        Ordered {{ order.created_at.strftime('%m/%d/%Y') }}
+                    </div>
+                    
+                    <div style="display: flex; gap: 8px;">
+                        <button class="btn btn-secondary" style="font-size: 12px; padding: 6px 12px;"
+                                onclick="viewCateringDetails({{ order.id }})">
+                            <i data-feather="eye" style="width: 14px; height: 14px; margin-right: 5px;"></i>
+                            View Details
+                        </button>
+                        
+                        {% if current_user.role.name in ['admin', 'manager', 'staff'] and order.status.value not in ['delivered', 'cancelled'] %}
+                        <button class="btn btn-primary" style="font-size: 12px; padding: 6px 12px;"
+                                onclick="manageCateringOrder({{ order.id }})">
+                            <i data-feather="edit" style="width: 14px; height: 14px; margin-right: 5px;"></i>
+                            Manage
+                        </button>
+                        {% endif %}
+                    </div>
+                </div>
+            </div>
+            {% endfor %}
+        </div>
+        
+        <!-- Pagination -->
+        {% if catering_orders.pages > 1 %}
+        <div class="pagination" style="margin-top: 20px;">
+            {% if catering_orders.has_prev %}
+                <a href="{{ url_for('catering', page=catering_orders.prev_num) }}">&laquo; Prev</a>
+            {% endif %}
+            
+            {% for page_num in catering_orders.iter_pages() %}
+                {% if page_num %}
+                    {% if page_num != catering_orders.page %}
+                        <a href="{{ url_for('catering', page=page_num) }}">{{ page_num }}</a>
+                    {% else %}
+                        <a href="#" class="active">{{ page_num }}</a>
+                    {% endif %}
+                {% else %}
+                    <span>...</span>
+                {% endif %}
+            {% endfor %}
+            
+            {% if catering_orders.has_next %}
+                <a href="{{ url_for('catering', page=catering_orders.next_num) }}">Next &raquo;</a>
+            {% endif %}
+        </div>
+        {% endif %}
+        
+        {% else %}
+        <div style="text-align: center; padding: 40px; color: var(--text-muted);">
+            <i data-feather="calendar" style="width: 48px; height: 48px; margin-bottom: 15px; opacity: 0.5;"></i>
+            <h3>No Catering Orders</h3>
+            <p>There are no catering orders to display.</p>
+            {% if current_user.role.name in ['admin', 'manager', 'staff'] %}
+            <a href="{{ url_for('new_order') }}?type=catering" class="btn btn-primary" style="margin-top: 15px;">
+                Create First Catering Order
+            </a>
+            {% endif %}
+        </div>
+        {% endif %}
+    </div>
+</div>
+
+<style>
+.page-header {
+    display: flex;
+    justify-content: space-between;
+    align-items: center;
+    margin-bottom: 20px;
+}
+
+.header-actions {
+    display: flex;
+    gap: 10px;
+}
+
+.catering-card:hover {
+    border-color: var(--neon-cyan);
+    box-shadow: 0 0 15px rgba(0, 255, 255, 0.2);
+    transform: translateY(-2px);
+}
+
+@media (max-width: 768px) {
+    .page-header {
+        flex-direction: column;
+        gap: 15px;
+        align-items: stretch;
+    }
+    
+    .header-actions {
+        justify-content: center;
+    }
+    
+    .catering-grid {
+        grid-template-columns: 1fr !important;
+    }
+}
+</style>
+
+<script>
+function viewCateringDetails(orderId) {
+    showNotification(`Viewing details for catering order ID: ${orderId}`, 'info');
+    // This would typically open a detailed modal or navigate to a detail page
+}
+
+function manageCateringOrder(orderId) {
+    showNotification(`Managing catering order ID: ${orderId}`, 'info');
+    // This would typically open a management interface
+}
+</script>
+{% endblock %}

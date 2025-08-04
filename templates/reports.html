@@ -1,0 +1,388 @@
+{% extends "base.html" %}
+
+{% block title %}Reports & Analytics - Smart Bakery Management{% endblock %}
+
+{% block content %}
+<div class="reports-page">
+    <div class="page-header">
+        <h1 class="header-title">
+            <i data-feather="bar-chart-2"></i>
+            Reports & Analytics
+        </h1>
+        <div class="header-actions">
+            <button class="btn btn-secondary" onclick="exportReports()">
+                <i data-feather="download"></i>
+                Export Reports
+            </button>
+            <button class="btn btn-primary refresh-insights-btn">
+                <i data-feather="refresh-cw"></i>
+                Refresh Data
+            </button>
+        </div>
+    </div>
+    
+    <!-- Key Metrics -->
+    <div class="stats-grid" style="margin-bottom: 30px;">
+        <div class="stat-card">
+            <div class="stat-value">${{ "%.0f"|format(reports_data.sales_summary.total_revenue) }}</div>
+            <div class="stat-label">Total Revenue</div>
+            <div style="font-size: 12px; color: var(--success); margin-top: 5px;">
+                <i data-feather="trending-up" style="width: 12px; height: 12px;"></i>
+                +12% from last month
+            </div>
+        </div>
+        <div class="stat-card">
+            <div class="stat-value">{{ reports_data.sales_summary.total_orders }}</div>
+            <div class="stat-label">Total Orders</div>
+            <div style="font-size: 12px; color: var(--success); margin-top: 5px;">
+                <i data-feather="trending-up" style="width: 12px; height: 12px;"></i>
+                +8% from last month
+            </div>
+        </div>
+        <div class="stat-card">
+            <div class="stat-value">${{ "%.2f"|format(reports_data.sales_summary.average_order_value) }}</div>
+            <div class="stat-label">Average Order Value</div>
+            <div style="font-size: 12px; color: var(--warning); margin-top: 5px;">
+                <i data-feather="minus" style="width: 12px; height: 12px;"></i>
+                -2% from last month
+            </div>
+        </div>
+        <div class="stat-card">
+            <div class="stat-value">{{ reports_data.sales_summary.cancelled_orders }}</div>
+            <div class="stat-label">Cancelled Orders</div>
+            <div style="font-size: 12px; color: var(--error); margin-top: 5px;">
+                <i data-feather="trending-down" style="width: 12px; height: 12px;"></i>
+                {{ "%.1f"|format((reports_data.sales_summary.cancelled_orders / reports_data.sales_summary.total_orders * 100) if reports_data.sales_summary.total_orders > 0 else 0) }}% cancellation rate
+            </div>
+        </div>
+    </div>
+    
+    <!-- Charts Row -->
+    <div style="display: grid; grid-template-columns: 1fr 1fr; gap: 20px; margin-bottom: 20px;">
+        <!-- Sales Trend Chart -->
+        <div class="card">
+            <div class="card-header">
+                <h3 class="card-title">Sales Trend</h3>
+                <select class="form-control" style="width: auto;" onchange="updateSalesChart(this.value)">
+                    <option value="week">Last 7 Days</option>
+                    <option value="month" selected>Last 30 Days</option>
+                    <option value="quarter">Last 3 Months</option>
+                    <option value="year">Last Year</option>
+                </select>
+            </div>
+            <div class="chart-container">
+                <canvas id="salesChart"></canvas>
+            </div>
+        </div>
+        
+        <!-- Revenue by Category Chart -->
+        <div class="card">
+            <div class="card-header">
+                <h3 class="card-title">Revenue by Category</h3>
+            </div>
+            <div class="chart-container">
+                <canvas id="categoryRevenueChart"></canvas>
+            </div>
+        </div>
+    </div>
+    
+    <!-- AI Insights Section -->
+    {% if ai_insights %}
+    <div class="card ai-insights-container">
+        <div class="card-header">
+            <h3 class="card-title">🤖 AI Business Insights</h3>
+            <span class="badge badge-info">{{ ai_insights|length }} Active Insights</span>
+        </div>
+        <div style="display: grid; grid-template-columns: repeat(auto-fit, minmax(300px, 1fr)); gap: 15px;">
+            {% for insight in ai_insights %}
+            <div class="ai-insight">
+                <div class="ai-insight-title">{{ insight.title }}</div>
+                <div class="ai-insight-description">{{ insight.description }}</div>
+                <div class="confidence-score">
+                    Confidence: {{ (insight.confidence_score * 100)|round }}%
+                </div>
+                <div style="margin-top: 10px; display: flex; gap: 8px;">
+                    <button class="btn btn-success" style="font-size: 12px; padding: 4px 8px;" onclick="implementInsight({{ insight.id }})">
+                        Implement
+                    </button>
+                    <button class="btn btn-secondary" style="font-size: 12px; padding: 4px 8px;" onclick="dismissInsight({{ insight.id }})">
+                        Dismiss
+                    </button>
+                </div>
+            </div>
+            {% endfor %}
+        </div>
+    </div>
+    {% endif %}
+    
+    <!-- Detailed Reports -->
+    <div style="display: grid; grid-template-columns: 1fr 1fr; gap: 20px;">
+        <!-- Sales Summary -->
+        <div class="card">
+            <div class="card-header">
+                <h3 class="card-title">Sales Summary</h3>
+                <button class="btn btn-secondary" onclick="downloadSalesReport()">
+                    <i data-feather="download" style="width: 14px; height: 14px;"></i>
+                </button>
+            </div>
+            <div class="report-metrics">
+                <div class="metric-row" style="display: flex; justify-content: between; padding: 10px 0; border-bottom: 1px solid var(--bg-tertiary);">
+                    <span>Total Revenue</span>
+                    <span style="font-weight: 600; color: var(--success);">${{ "%.2f"|format(reports_data.sales_summary.total_revenue) }}</span>
+                </div>
+                <div class="metric-row" style="display: flex; justify-content: between; padding: 10px 0; border-bottom: 1px solid var(--bg-tertiary);">
+                    <span>Total Orders</span>
+                    <span style="font-weight: 600;">{{ reports_data.sales_summary.total_orders }}</span>
+                </div>
+                <div class="metric-row" style="display: flex; justify-content: between; padding: 10px 0; border-bottom: 1px solid var(--bg-tertiary);">
+                    <span>Average Order Value</span>
+                    <span style="font-weight: 600; color: var(--neon-cyan);">${{ "%.2f"|format(reports_data.sales_summary.average_order_value) }}</span>
+                </div>
+                <div class="metric-row" style="display: flex; justify-content: between; padding: 10px 0; border-bottom: 1px solid var(--bg-tertiary);">
+                    <span>Cancelled Orders</span>
+                    <span style="font-weight: 600; color: var(--error);">{{ reports_data.sales_summary.cancelled_orders }}</span>
+                </div>
+                <div class="metric-row" style="display: flex; justify-content: between; padding: 10px 0;">
+                    <span>Cancellation Rate</span>
+                    <span style="font-weight: 600; color: var(--warning);">
+                        {{ "%.1f"|format((reports_data.sales_summary.cancelled_orders / reports_data.sales_summary.total_orders * 100) if reports_data.sales_summary.total_orders > 0 else 0) }}%
+                    </span>
+                </div>
+            </div>
+        </div>
+        
+        <!-- Inventory Summary -->
+        <div class="card">
+            <div class="card-header">
+                <h3 class="card-title">Inventory Summary</h3>
+                <button class="btn btn-secondary" onclick="downloadInventoryReport()">
+                    <i data-feather="download" style="width: 14px; height: 14px;"></i>
+                </button>
+            </div>
+            <div class="report-metrics">
+                <div class="metric-row" style="display: flex; justify-content: between; padding: 10px 0; border-bottom: 1px solid var(--bg-tertiary);">
+                    <span>Total Products</span>
+                    <span style="font-weight: 600;">{{ reports_data.inventory_summary.total_products }}</span>
+                </div>
+                <div class="metric-row" style="display: flex; justify-content: between; padding: 10px 0; border-bottom: 1px solid var(--bg-tertiary);">
+                    <span>Low Stock Items</span>
+                    <span style="font-weight: 600; color: var(--warning);">{{ reports_data.inventory_summary.low_stock_items }}</span>
+                </div>
+                <div class="metric-row" style="display: flex; justify-content: between; padding: 10px 0; border-bottom: 1px solid var(--bg-tertiary);">
+                    <span>Out of Stock</span>
+                    <span style="font-weight: 600; color: var(--error);">{{ reports_data.inventory_summary.out_of_stock }}</span>
+                </div>
+                <div class="metric-row" style="display: flex; justify-content: between; padding: 10px 0;">
+                    <span>Stock Health</span>
+                    <span style="font-weight: 600; color: var(--success);">
+                        {{ "%.0f"|format(((reports_data.inventory_summary.total_products - reports_data.inventory_summary.low_stock_items) / reports_data.inventory_summary.total_products * 100) if reports_data.inventory_summary.total_products > 0 else 0) }}%
+                    </span>
+                </div>
+            </div>
+        </div>
+    </div>
+    
+    <!-- Advanced Analytics -->
+    <div class="card" style="margin-top: 20px;">
+        <div class="card-header">
+            <h3 class="card-title">Advanced Analytics</h3>
+            <div style="display: flex; gap: 10px;">
+                <button class="btn btn-secondary" onclick="showCustomerAnalytics()">Customer Analytics</button>
+                <button class="btn btn-secondary" onclick="showProductAnalytics()">Product Performance</button>
+                <button class="btn btn-secondary" onclick="showPredictiveAnalytics()">Predictive Insights</button>
+            </div>
+        </div>
+        
+        <div id="advanced-analytics-content">
+            <div style="display: grid; grid-template-columns: 1fr 1fr; gap: 20px; padding: 20px;">
+                <!-- Customer Segmentation -->
+                <div>
+                    <h4 style="color: var(--neon-cyan); margin-bottom: 15px;">Customer Segmentation</h4>
+                    <div style="display: grid; gap: 10px;">
+                        <div style="background: var(--bg-tertiary); padding: 15px; border-radius: 8px;">
+                            <div style="display: flex; justify-content: between; align-items: center;">
+                                <span>VIP Customers (10+ orders)</span>
+                                <span style="font-weight: 600; color: var(--neon-purple);">24</span>
+                            </div>
+                            <div style="font-size: 12px; color: var(--text-muted); margin-top: 5px;">
+                                Average spend: $450/month
+                            </div>
+                        </div>
+                        <div style="background: var(--bg-tertiary); padding: 15px; border-radius: 8px;">
+                            <div style="display: flex; justify-content: between; align-items: center;">
+                                <span>Regular Customers (3-9 orders)</span>
+                                <span style="font-weight: 600; color: var(--neon-cyan);">89</span>
+                            </div>
+                            <div style="font-size: 12px; color: var(--text-muted); margin-top: 5px;">
+                                Average spend: $180/month
+                            </div>
+                        </div>
+                        <div style="background: var(--bg-tertiary); padding: 15px; border-radius: 8px;">
+                            <div style="display: flex; justify-content: between; align-items: center;">
+                                <span>New Customers (1-2 orders)</span>
+                                <span style="font-weight: 600; color: var(--neon-green);">156</span>
+                            </div>
+                            <div style="font-size: 12px; color: var(--text-muted); margin-top: 5px;">
+                                Average spend: $45/month
+                            </div>
+                        </div>
+                    </div>
+                </div>
+                
+                <!-- Top Products -->
+                <div>
+                    <h4 style="color: var(--neon-cyan); margin-bottom: 15px;">Top Performing Products</h4>
+                    <div style="display: grid; gap: 10px;">
+                        <div style="background: var(--bg-tertiary); padding: 15px; border-radius: 8px;">
+                            <div style="display: flex; justify-content: between; align-items: center;">
+                                <span>Chocolate Croissant</span>
+                                <span style="font-weight: 600; color: var(--success);">$2,450</span>
+                            </div>
+                            <div style="font-size: 12px; color: var(--text-muted); margin-top: 5px;">
+                                245 units sold this month
+                            </div>
+                        </div>
+                        <div style="background: var(--bg-tertiary); padding: 15px; border-radius: 8px;">
+                            <div style="display: flex; justify-content: between; align-items: center;">
+                                <span>Artisan Sourdough</span>
+                                <span style="font-weight: 600; color: var(--success);">$1,890</span>
+                            </div>
+                            <div style="font-size: 12px; color: var(--text-muted); margin-top: 5px;">
+                                189 units sold this month
+                            </div>
+                        </div>
+                        <div style="background: var(--bg-tertiary); padding: 15px; border-radius: 8px;">
+                            <div style="display: flex; justify-content: between; align-items: center;">
+                                <span>Wedding Cake (Custom)</span>
+                                <span style="font-weight: 600; color: var(--success);">$1,650</span>
+                            </div>
+                            <div style="font-size: 12px; color: var(--text-muted); margin-top: 5px;">
+                                11 units sold this month
+                            </div>
+                        </div>
+                    </div>
+                </div>
+            </div>
+        </div>
+    </div>
+</div>
+
+<style>
+.page-header {
+    display: flex;
+    justify-content: space-between;
+    align-items: center;
+    margin-bottom: 20px;
+}
+
+.header-actions {
+    display: flex;
+    gap: 10px;
+}
+
+@media (max-width: 768px) {
+    .page-header {
+        flex-direction: column;
+        gap: 15px;
+        align-items: stretch;
+    }
+    
+    .header-actions {
+        justify-content: center;
+    }
+    
+    .card-header {
+        flex-direction: column;
+        gap: 10px;
+        align-items: stretch;
+    }
+}
+</style>
+
+<script>
+function updateSalesChart(period) {
+    showNotification(`Updating sales chart for ${period}`, 'info');
+    // This would update the chart with new data based on the selected period
+}
+
+function exportReports() {
+    showNotification('Exporting reports...', 'info');
+    // This would generate and download a comprehensive report
+}
+
+function downloadSalesReport() {
+    showNotification('Downloading sales report...', 'info');
+    // This would download a detailed sales report
+}
+
+function downloadInventoryReport() {
+    showNotification('Downloading inventory report...', 'info');
+    // This would download a detailed inventory report
+}
+
+function implementInsight(insightId) {
+    showNotification(`Implementing insight ID: ${insightId}`, 'success');
+    // This would implement the AI recommendation
+}
+
+function dismissInsight(insightId) {
+    showNotification(`Dismissed insight ID: ${insightId}`, 'info');
+    // This would dismiss the AI insight
+}
+
+function showCustomerAnalytics() {
+    showNotification('Loading customer analytics...', 'info');
+    // This would load detailed customer analytics
+}
+
+function showProductAnalytics() {
+    showNotification('Loading product performance analytics...', 'info');
+    // This would load detailed product analytics
+}
+
+function showPredictiveAnalytics() {
+    showNotification('Loading predictive insights...', 'info');
+    // This would load AI-powered predictive analytics
+}
+
+// Initialize category revenue chart
+document.addEventListener('DOMContentLoaded', function() {
+    const categoryCanvas = document.getElementById('categoryRevenueChart');
+    if (categoryCanvas) {
+        const ctx = categoryCanvas.getContext('2d');
+        
+        new Chart(ctx, {
+            type: 'doughnut',
+            data: {
+                labels: ['Bread', 'Pastries', 'Cakes', 'Cookies', 'Beverages'],
+                datasets: [{
+                    data: [2450, 1890, 1650, 1200, 890],
+                    backgroundColor: [
+                        '#00ffff',
+                        '#ff00ff',
+                        '#00ff00',
+                        '#ffff00',
+                        '#8a2be2'
+                    ],
+                    borderWidth: 2,
+                    borderColor: '#1a1a1a'
+                }]
+            },
+            options: {
+                responsive: true,
+                maintainAspectRatio: false,
+                plugins: {
+                    legend: {
+                        position: 'bottom',
+                        labels: {
+                            color: '#b0b0b0',
+                            padding: 20
+                        }
+                    }
+                }
+            }
+        });
+    }
+});
+</script>
+{% endblock %}
