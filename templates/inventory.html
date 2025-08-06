@@ -14,6 +14,10 @@
                 <i data-feather="plus"></i>
                 Add Product
             </a>
+            <a href="{{ url_for('raw_products') }}" class="btn btn-secondary">
+                <i data-feather="layers"></i>
+                Raw Materials
+            </a>
         </div>
     </div>
     
@@ -447,6 +451,46 @@ function quickRestock(inventoryId) {
         setTimeout(() => {
             window.location.reload();
         }, 1000);
+    }
+}
+
+function orderIngredient(ingredientName, supplierContact) {
+    if (supplierContact) {
+        showNotification(`Ordering ${ingredientName} from ${supplierContact}`, 'info');
+        // In a real application, this could open a phone dialer or email client
+    } else {
+        showNotification(`No supplier contact available for ${ingredientName}`, 'warning');
+    }
+}
+
+function reorderIngredient(ingredientName) {
+    showNotification(`Reorder request sent for ${ingredientName}`, 'info');
+    // In a real application, this could trigger an automated reorder process
+}
+
+function showTab(tabName) {
+    // Hide all tab contents
+    const tabContents = document.querySelectorAll('.tab-content');
+    tabContents.forEach(content => {
+        content.style.display = 'none';
+    });
+    
+    // Remove active class from all tab buttons
+    const tabButtons = document.querySelectorAll('.tab-btn');
+    tabButtons.forEach(btn => {
+        btn.classList.remove('active');
+    });
+    
+    // Show selected tab content
+    const selectedContent = document.getElementById(tabName + '-content');
+    if (selectedContent) {
+        selectedContent.style.display = 'block';
+    }
+    
+    // Add active class to selected tab button
+    const selectedButton = document.getElementById(tabName + '-tab');
+    if (selectedButton) {
+        selectedButton.classList.add('active');
     }
 }
 </script>

@@ -1,0 +1,157 @@
+{% extends "base.html" %}
+
+{% block title %}Detailed Analytics - Smart Bakery Management{% endblock %}
+
+{% block content %}
+
+<div class="detailed-analytics-page">
+    <div class="page-header">
+        <h1 class="header-title">
+            <i data-feather="bar-chart-2"></i>
+            Detailed Analytics
+        </h1>
+    </div>
+    <div class="analytics-section">
+        <h2>Overview</h2>
+        <p>
+            This page provides a comprehensive analysis of sales, revenue by category, and order status. Advanced statistical tests and machine learning insights are included to help you make data-driven decisions.
+        </p>
+    </div>
+    <div class="analytics-section">
+        <h2>Sales Trends</h2>
+        <canvas id="detailedSalesChart" style="height: 350px;"></canvas>
+        <div id="regressionStats" style="margin-top: 15px; color: var(--neon-cyan); font-size: 15px;"></div>
+    </div>
+    <div class="analytics-section">
+        <h2>Revenue by Category</h2>
+        <canvas id="detailedCategoryChart" style="height: 350px;"></canvas>
+    </div>
+    <div class="analytics-section">
+        <h2>Order Status Overview</h2>
+        <canvas id="detailedOrderStatusChart" style="height: 350px;"></canvas>
+    </div>
+    <div class="analytics-section">
+        <h2>Statistical Tests</h2>
+        <ul style="font-size: 15px; color: var(--neon-green);">
+            <li><b>Line of Best Fit:</b> <span id="lineEquation">Loading...</span></li>
+            <li><b>R² Value:</b> <span id="r2Value">Loading...</span></li>
+            <li><b>ANOVA Test:</b> <span id="anovaResult">Loading...</span></li>
+            <li><b>Z-Test:</b> <span id="zTestResult">Loading...</span></li>
+            <li><b>P-Value:</b> <span id="pValueResult">Loading...</span></li>
+        </ul>
+    </div>
+</div>
+
+<script>
+document.addEventListener('DOMContentLoaded', function() {
+    fetch('/api/chart-data?period=90d')
+        .then(res => res.json())
+        .then(data => {
+            // Sales Trend with Line of Best Fit
+            const ctx = document.getElementById('detailedSalesChart').getContext('2d');
+            const labels = data.revenue_labels;
+            const values = data.revenue_data;
+            let regression = data.regression || {};
+            let linePoints = [];
+            if (regression.slope !== undefined && regression.intercept !== undefined) {
+                linePoints = labels.map((l, i) => regression.slope * i + regression.intercept);
+            }
+            const chart = new Chart(ctx, {
+                type: 'line',
+                data: {
+                    labels: labels,
+                    datasets: [
+                        {
+                            label: 'Revenue',
+                            data: values,
+                            backgroundColor: 'rgba(0, 255, 255, 0.1)',
+                            borderColor: '#00ffff',
+                            borderWidth: 2,
+                            fill: true,
+                            tension: 0.4
+                        },
+                        regression.slope !== undefined ? {
+                            label: 'Line of Best Fit',
+                            data: linePoints,
+                            borderColor: '#ff00ff',
+                            borderWidth: 2,
+                            fill: false,
+                            pointRadius: 0,
+                            borderDash: [8, 4],
+                            tension: 0
+                        } : null
+                    ].filter(Boolean)
+                },
+                options: {
+                    responsive: true,
+                    plugins: { legend: { labels: { color: '#00ffff' } } },
+                    scales: {
+                        y: { beginAtZero: true, ticks: { color: '#b0b0b0', callback: v => '$' + v } },
+                        x: { ticks: { color: '#b0b0b0' } }
+                    }
+                }
+            });
+            // Show regression stats
+            if (regression.equation && regression.r2 !== undefined) {
+                document.getElementById('regressionStats').innerHTML =
+                    `<b>Line of Best Fit:</b> y = ${regression.slope.toFixed(2)}x + ${regression.intercept.toFixed(2)} &nbsp; <b>R²:</b> ${regression.r2.toFixed(3)}`;
+                document.getElementById('lineEquation').innerText = `y = ${regression.slope.toFixed(2)}x + ${regression.intercept.toFixed(2)}`;
+                document.getElementById('r2Value').innerText = regression.r2.toFixed(3);
+            } else {
+                document.getElementById('regressionStats').innerText = 'No regression data available.';
+            }
+            // Statistical tests
+            if (data.anova) {
+                document.getElementById('anovaResult').innerText = data.anova;
+            }
+            if (data.z_test) {
+                document.getElementById('zTestResult').innerText = data.z_test;
+            }
+            if (data.p_value !== undefined) {
+                document.getElementById('pValueResult').innerText = data.p_value;
+            }
+            // Revenue by Category
+            new Chart(document.getElementById('detailedCategoryChart').getContext('2d'), {
+                type: 'doughnut',
+                data: {
+                    labels: data.donut ? data.donut.labels : [],
+                    datasets: [{
+                        data: data.donut ? data.donut.data : [],
+                        backgroundColor: [
+                            '#00ffff','#ff00ff','#00ff00','#ffff00','#8a2be2','#ffaa00','#00aaff','#ff8800','#00ff88','#b0b0b0'
+                        ],
+                        borderWidth: 2,
+                        borderColor: '#1a1a1a'
+                    }]
+                },
+                options: {
+                    responsive: true,
+                    plugins: { legend: { position: 'bottom', labels: { color: '#b0b0b0', padding: 20 } } }
+                }
+            });
+            // Order Status Overview
+            new Chart(document.getElementById('detailedOrderStatusChart').getContext('2d'), {
+                type: 'bar',
+                data: {
+                    labels: Object.keys(data.order_status_data),
+                    datasets: [{
+                        label: 'Orders',
+                        data: Object.values(data.order_status_data),
+                        backgroundColor: '#00ffff',
+                        borderColor: '#00b0b0',
+                        borderWidth: 1
+                    }]
+                },
+                options: {
+                    responsive: true,
+                    plugins: { legend: { display: false } },
+                    scales: {
+                        y: { beginAtZero: true, ticks: { color: '#b0b0b0' } },
+                        x: { ticks: { color: '#b0b0b0' } }
+                    }
+                }
+            });
+        });
+});
+</script>
+{% endblock %}

@@ -1,0 +1,109 @@
+{% extends "base.html" %}
+
+{% block title %}Staff Dashboard - Smart Bakery Management{% endblock %}
+
+{% block content %}
+<div class="dashboard">
+    <h1 class="header-title">
+        <i data-feather="user"></i>
+        Staff Dashboard
+    </h1>
+    
+    <!-- Staff Stats -->
+    <div class="stats-grid">
+        <div class="stat-card">
+            <div class="stat-value">{{ stats.active_orders or 0 }}</div>
+            <div class="stat-label">Active Orders</div>
+        </div>
+        <div class="stat-card">
+            <div class="stat-value">{{ stats.completed_today or 0 }}</div>
+            <div class="stat-label">Completed Today</div>
+        </div>
+    </div>
+    
+    <!-- Today's Schedule -->
+    {% if schedule %}
+    <div class="card">
+        <div class="card-header">
+            <h3 class="card-title">Today's Schedule</h3>
+        </div>
+        <div class="schedule-info">
+            <p><strong>Position:</strong> {{ schedule.position or 'Staff' }}</p>
+            <p><strong>Time:</strong> {{ schedule.start_time.strftime('%H:%M') }} - {{ schedule.end_time.strftime('%H:%M') }}</p>
+            {% if schedule.notes %}
+            <p><strong>Notes:</strong> {{ schedule.notes }}</p>
+            {% endif %}
+        </div>
+    </div>
+    {% endif %}
+    
+    <!-- Active Orders -->
+    {% if active_orders %}
+    <div class="card">
+        <div class="card-header">
+            <h3 class="card-title">Active Orders</h3>
+        </div>
+        <div class="table-container">
+            <table class="table">
+                <thead>
+                    <tr>
+                        <th>Order #</th>
+                        <th>Customer</th>
+                        <th>Status</th>
+                        <th>Total</th>
+                        <th>Actions</th>
+                    </tr>
+                </thead>
+                <tbody>
+                    {% for order in active_orders %}
+                    <tr data-order-id="{{ order.id }}">
+                        <td>{{ order.order_number }}</td>
+                        <td>{{ order.customer.first_name }} {{ order.customer.last_name }}</td>
+                        <td>
+                            <span class="status-badge badge badge-{{ 'info' if order.status.value in ['confirmed', 'in_preparation'] else 'warning' }}">
+                                {{ order.status.value.replace('_', ' ').title() }}
+                            </span>
+                        </td>
+                        <td>${{ "%.2f"|format(order.total_amount) }}</td>
+                        <td>
+                            {% if order.status.value == 'confirmed' %}
+                            <button class="btn btn-secondary btn-sm" onclick="updateOrderStatus({{ order.id }}, 'in_preparation')">
+                                Start Preparation
+                            </button>
+                            {% elif order.status.value == 'in_preparation' %}
+                            <button class="btn btn-success btn-sm" onclick="updateOrderStatus({{ order.id }}, 'ready')">
+                                Mark Ready
+                            </button>
+                            {% endif %}
+                        </td>
+                    </tr>
+                    {% endfor %}
+                </tbody>
+            </table>
+        </div>
+    </div>
+    {% else %}
+    <div class="card">
+        <div class="card-body">
+            <p class="text-center">No active orders at the moment.</p>
+        </div>
+    </div>
+    {% endif %}
+</div>
+
+<style>
+.schedule-info {
+    padding: 20px;
+}
+
+.schedule-info p {
+    margin: 10px 0;
+    color: var(--text-secondary);
+}
+
+.btn-sm {
+    padding: 6px 12px;
+    font-size: 12px;
+}
+</style>
+{% endblock %} 

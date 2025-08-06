@@ -1,0 +1,482 @@
+{% extends "base.html" %}
+
+{% block title %}Weekly Schedule - Smart Bakery Management{% endblock %}
+
+{% block content %}
+<div class="weekly-schedule-page">
+    <div class="page-header">
+        <h1 class="header-title">
+            <i data-feather="calendar"></i>
+            Weekly Schedule Overview
+        </h1>
+        <div class="header-actions">
+            <a href="{{ url_for('staff') }}" class="btn btn-secondary">
+                <i data-feather="arrow-left"></i>
+                Back to Staff
+            </a>
+            <a href="{{ url_for('modifications') }}" class="btn btn-info">
+                <i data-feather="edit-3"></i>
+                View Modifications
+            </a>
+            <a href="{{ url_for('weekly_schedule', week=week_offset-1) }}" class="btn btn-outline">
+                <i data-feather="chevron-left"></i>
+                Previous Week
+            </a>
+            <a href="{{ url_for('weekly_schedule', week=week_offset+1) }}" class="btn btn-outline">
+                Next Week
+                <i data-feather="chevron-right"></i>
+            </a>
+        </div>
+    </div>
+    
+    <!-- Week Navigation -->
+    <div class="week-navigation">
+        <div class="week-info">
+            <h3>Week of {{ start_of_week.strftime('%B %d, %Y') }}</h3>
+            <p>{{ start_of_week.strftime('%B %d') }} - {{ end_of_week.strftime('%B %d, %Y') }}</p>
+        </div>
+        <div class="week-stats">
+            <div class="stat-item">
+                <span class="stat-value">{{ staff_members|length }}</span>
+                <span class="stat-label">Staff Members</span>
+            </div>
+            <div class="stat-item">
+                <span class="stat-value">
+                    {{ total_schedules }}
+                </span>
+                <span class="stat-label">Scheduled Days</span>
+            </div>
+        </div>
+    </div>
+    
+    <!-- Weekly Schedule Grid -->
+    <div class="schedule-grid-container">
+        <div class="schedule-grid">
+            <!-- Header Row -->
+            <div class="grid-header">
+                <div class="staff-header">Staff Member</div>
+                {% for i in range(7) %}
+                    {% set current_date = start_of_week + timedelta(days=i) %}
+                    <div class="day-header">
+                        <div class="day-name">{{ current_date.strftime('%A') }}</div>
+                        <div class="day-date">{{ current_date.strftime('%b %d') }}</div>
+                    </div>
+                {% endfor %}
+            </div>
+            
+            <!-- Staff Rows -->
+            {% for staff in staff_members %}
+            <div class="staff-row">
+                <div class="staff-info">
+                    <div class="staff-name">{{ staff.first_name }} {{ staff.last_name }}</div>
+                    <div class="staff-role">{{ staff.role.name.title() }}</div>
+                </div>
+                
+                {% for i in range(7) %}
+                    {% set current_date = start_of_week + timedelta(days=i) %}
+                    {% set schedule = schedule_matrix[staff.id][current_date] %}
+                    
+                    <div class="schedule-cell {{ 'has-schedule' if schedule else 'no-schedule' }} {{ 'modified' if schedule and schedule.is_modified else '' }}">
+                        {% if schedule %}
+                            <div class="schedule-content">
+                                {% if schedule.is_modified %}
+                                <div class="modification-indicator" title="Modified: {{ schedule.modification_reason or 'No reason provided' }}">
+                                    <i data-feather="edit-3"></i>
+                                </div>
+                                {% endif %}
+                                <div class="schedule-time">
+                                    {{ schedule.start_time.strftime('%H:%M') }} - {{ schedule.end_time.strftime('%H:%M') }}
+                                </div>
+                                {% if schedule.position %}
+                                <div class="schedule-position">
+                                    {{ schedule.position }}
+                                </div>
+                                {% endif %}
+                                {% if schedule.notes %}
+                                <div class="schedule-notes" title="{{ schedule.notes }}">
+                                    <i data-feather="file-text"></i>
+                                </div>
+                                {% endif %}
+                                <div class="schedule-actions">
+                                    <a href="{{ url_for('manage_staff_schedule', staff_id=staff.id) }}" 
+                                       class="btn btn-sm btn-primary" title="Edit Schedule">
+                                        <i data-feather="edit-2"></i>
+                                    </a>
+                                    {% if schedule.is_modified %}
+                                    <button class="btn btn-sm btn-outline" onclick="viewModificationHistory({{ schedule.id }})" title="View Changes">
+                                        <i data-feather="history"></i>
+                                    </button>
+                                    {% endif %}
+                                </div>
+                            </div>
+                        {% else %}
+                            <div class="no-schedule">
+                                <i data-feather="x-circle"></i>
+                                <span>Off</span>
+                            </div>
+                        {% endif %}
+                    </div>
+                {% endfor %}
+            </div>
+            {% endfor %}
+        </div>
+    </div>
+    
+    <!-- Quick Actions -->
+    <div class="quick-actions">
+        <div class="card">
+            <div class="card-header">
+                <h3 class="card-title">
+                    <i data-feather="zap"></i>
+                    Quick Actions
+                </h3>
+            </div>
+            <div class="card-body">
+                <div class="action-buttons">
+                    <button class="btn btn-primary" onclick="addBulkSchedule()">
+                        <i data-feather="plus"></i>
+                        Add Bulk Schedule
+                    </button>
+                    <button class="btn btn-secondary" onclick="exportSchedule()">
+                        <i data-feather="download"></i>
+                        Export Schedule
+                    </button>
+                    <button class="btn btn-info" onclick="printSchedule()">
+                        <i data-feather="printer"></i>
+                        Print Schedule
+                    </button>
+                </div>
+            </div>
+        </div>
+    </div>
+</div>
+
+<style>
+.weekly-schedule-page {
+    padding: 20px;
+}
+
+.page-header {
+    display: flex;
+    justify-content: space-between;
+    align-items: center;
+    margin-bottom: 20px;
+}
+
+.header-actions {
+    display: flex;
+    gap: 10px;
+}
+
+.week-navigation {
+    display: flex;
+    justify-content: space-between;
+    align-items: center;
+    margin-bottom: 20px;
+    padding: 20px;
+    background: var(--bg-card);
+    border-radius: 8px;
+    border: 1px solid var(--border-color);
+}
+
+.week-info h3 {
+    margin: 0;
+    color: var(--text-primary);
+    font-size: 18px;
+}
+
+.week-info p {
+    margin: 5px 0 0 0;
+    color: var(--text-muted);
+    font-size: 14px;
+}
+
+.week-stats {
+    display: flex;
+    gap: 30px;
+}
+
+.stat-item {
+    text-align: center;
+}
+
+.stat-value {
+    display: block;
+    font-size: 24px;
+    font-weight: 600;
+    color: var(--accent-blue);
+}
+
+.stat-label {
+    font-size: 12px;
+    color: var(--text-muted);
+    text-transform: uppercase;
+    letter-spacing: 0.5px;
+}
+
+.schedule-grid-container {
+    background: var(--bg-card);
+    border-radius: 8px;
+    border: 1px solid var(--border-color);
+    overflow: hidden;
+    margin-bottom: 20px;
+}
+
+.schedule-grid {
+    display: grid;
+    grid-template-columns: 200px repeat(7, 1fr);
+    min-height: 400px;
+}
+
+.grid-header {
+    display: contents;
+}
+
+.staff-header, .day-header {
+    background: var(--bg-tertiary);
+    padding: 15px;
+    border-bottom: 1px solid var(--border-color);
+    border-right: 1px solid var(--border-color);
+    font-weight: 600;
+    text-align: center;
+}
+
+.staff-header {
+    text-align: left;
+}
+
+.day-header {
+    display: flex;
+    flex-direction: column;
+    gap: 5px;
+}
+
+.day-name {
+    font-size: 14px;
+    color: var(--text-primary);
+}
+
+.day-date {
+    font-size: 12px;
+    color: var(--text-muted);
+}
+
+.staff-row {
+    display: contents;
+}
+
+.staff-info {
+    padding: 15px;
+    border-bottom: 1px solid var(--border-color);
+    border-right: 1px solid var(--border-color);
+    background: var(--bg-secondary);
+}
+
+.staff-name {
+    font-weight: 600;
+    color: var(--text-primary);
+    margin-bottom: 5px;
+}
+
+.staff-role {
+    font-size: 12px;
+    color: var(--text-muted);
+    text-transform: uppercase;
+    letter-spacing: 0.5px;
+}
+
+.schedule-cell {
+    padding: 10px;
+    border-bottom: 1px solid var(--border-color);
+    border-right: 1px solid var(--border-color);
+    min-height: 80px;
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    position: relative;
+}
+
+.schedule-cell.has-schedule {
+    background: rgba(59, 130, 246, 0.1);
+}
+
+.schedule-cell.has-schedule.modified {
+    background: rgba(245, 158, 11, 0.1);
+    border: 2px solid #f59e0b;
+}
+
+.schedule-cell.no-schedule {
+    background: var(--bg-tertiary);
+    opacity: 0.7;
+}
+
+.modification-indicator {
+    position: absolute;
+    top: 5px;
+    right: 5px;
+    width: 20px;
+    height: 20px;
+    background: #f59e0b;
+    border-radius: 50%;
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    color: white;
+}
+
+.modification-indicator i {
+    width: 12px;
+    height: 12px;
+}
+
+.schedule-content {
+    text-align: center;
+    width: 100%;
+}
+
+.schedule-time {
+    font-weight: 600;
+    color: var(--text-primary);
+    font-size: 12px;
+    margin-bottom: 5px;
+}
+
+.schedule-position {
+    font-size: 11px;
+    color: var(--accent-blue);
+    margin-bottom: 5px;
+}
+
+.schedule-notes {
+    color: var(--text-muted);
+    margin-bottom: 5px;
+}
+
+.schedule-notes i {
+    width: 12px;
+    height: 12px;
+}
+
+.schedule-actions {
+    margin-top: 5px;
+}
+
+.btn-sm {
+    padding: 2px 6px;
+    font-size: 10px;
+}
+
+.no-schedule {
+    display: flex;
+    flex-direction: column;
+    align-items: center;
+    gap: 5px;
+    color: var(--text-muted);
+    font-size: 12px;
+}
+
+.no-schedule i {
+    width: 16px;
+    height: 16px;
+}
+
+.quick-actions {
+    margin-top: 20px;
+}
+
+.action-buttons {
+    display: flex;
+    gap: 15px;
+    flex-wrap: wrap;
+}
+
+@media (max-width: 1200px) {
+    .schedule-grid {
+        grid-template-columns: 150px repeat(7, 1fr);
+    }
+    
+    .staff-info, .schedule-cell {
+        padding: 8px;
+    }
+    
+    .schedule-time {
+        font-size: 11px;
+    }
+    
+    .schedule-position {
+        font-size: 10px;
+    }
+}
+
+@media (max-width: 768px) {
+    .page-header {
+        flex-direction: column;
+        gap: 15px;
+        align-items: stretch;
+    }
+    
+    .week-navigation {
+        flex-direction: column;
+        gap: 15px;
+        text-align: center;
+    }
+    
+    .week-stats {
+        justify-content: center;
+    }
+    
+    .schedule-grid-container {
+        overflow-x: auto;
+    }
+    
+    .schedule-grid {
+        min-width: 800px;
+    }
+    
+    .action-buttons {
+        flex-direction: column;
+    }
+}
+</style>
+
+<script>
+function addBulkSchedule() {
+    showNotification('Bulk schedule functionality coming soon!', 'info');
+}
+
+function exportSchedule() {
+    showNotification('Export functionality coming soon!', 'info');
+}
+
+function printSchedule() {
+    window.print();
+}
+
+function viewModificationHistory(scheduleId) {
+    // Show modification history in a modal
+    showNotification('Modification history view coming soon!', 'info');
+}
+
+// Add print styles
+const printStyles = `
+@media print {
+    .page-header, .week-navigation, .quick-actions, .header-actions {
+        display: none !important;
+    }
+    
+    .schedule-grid-container {
+        border: none !important;
+        box-shadow: none !important;
+    }
+    
+    .schedule-cell {
+        border: 1px solid #000 !important;
+    }
+}
+`;
+
+const styleSheet = document.createElement('style');
+styleSheet.textContent = printStyles;
+document.head.appendChild(styleSheet);
+</script>
+{% endblock %} 

@@ -1,0 +1,269 @@
+{% extends "base.html" %}
+
+{% block title %}{{ title }} - Smart Bakery Management{% endblock %}
+
+{% block content %}
+<div class="form-container">
+    <div class="card">
+        <div class="card-header">
+            <h2 class="card-title">
+                <i data-feather="layers"></i>
+                {{ title }}
+            </h2>
+        </div>
+        <div class="card-body">
+            <form method="POST" enctype="multipart/form-data">
+                {{ form.hidden_tag() }}
+                
+                <div class="form-group">
+                    {{ form.name.label(class="form-label") }}
+                    {{ form.name(class="form-control", placeholder="Enter raw material name") }}
+                    {% if form.name.errors %}
+                        <div class="alert alert-error">
+                            {% for error in form.name.errors %}
+                                {{ error }}
+                            {% endfor %}
+                        </div>
+                    {% endif %}
+                </div>
+                
+                <div class="form-group">
+                    {{ form.description.label(class="form-label") }}
+                    {{ form.description(class="form-control", rows="3", placeholder="Enter description") }}
+                    {% if form.description.errors %}
+                        <div class="alert alert-error">
+                            {% for error in form.description.errors %}
+                                {{ error }}
+                            {% endfor %}
+                        </div>
+                    {% endif %}
+                </div>
+                
+                <div class="form-row">
+                    <div class="form-group">
+                        {{ form.unit_of_measure.label(class="form-label") }}
+                        {{ form.unit_of_measure(class="form-control") }}
+                        {% if form.unit_of_measure.errors %}
+                            <div class="alert alert-error">
+                                {% for error in form.unit_of_measure.errors %}
+                                    {{ error }}
+                                {% endfor %}
+                            </div>
+                        {% endif %}
+                    </div>
+                    
+                    <div class="form-group">
+                        {{ form.cost_per_unit.label(class="form-label") }}
+                        {{ form.cost_per_unit(class="form-control", placeholder="0.00", step="0.01") }}
+                        {% if form.cost_per_unit.errors %}
+                            <div class="alert alert-error">
+                                {% for error in form.cost_per_unit.errors %}
+                                    {{ error }}
+                                {% endfor %}
+                            </div>
+                        {% endif %}
+                    </div>
+                </div>
+                
+                <div class="form-row">
+                    <div class="form-group">
+                        {{ form.supplier.label(class="form-label") }}
+                        {{ form.supplier(class="form-control", placeholder="Enter supplier name") }}
+                        {% if form.supplier.errors %}
+                            <div class="alert alert-error">
+                                {% for error in form.supplier.errors %}
+                                    {{ error }}
+                                {% endfor %}
+                            </div>
+                        {% endif %}
+                    </div>
+                    
+                    <div class="form-group">
+                        {{ form.supplier_contact.label(class="form-label") }}
+                        {{ form.supplier_contact(class="form-control", placeholder="Phone or email") }}
+                        {% if form.supplier_contact.errors %}
+                            <div class="alert alert-error">
+                                {% for error in form.supplier_contact.errors %}
+                                    {{ error }}
+                                {% endfor %}
+                            </div>
+                        {% endif %}
+                    </div>
+                </div>
+                
+                <div class="form-group">
+                    {{ form.location.label(class="form-label") }}
+                    {{ form.location(class="form-control", placeholder="Storage location") }}
+                    {% if form.location.errors %}
+                        <div class="alert alert-error">
+                            {% for error in form.location.errors %}
+                                {{ error }}
+                            {% endfor %}
+                        </div>
+                    {% endif %}
+                </div>
+                
+                <div class="form-row">
+                    <div class="form-group">
+                        {{ form.current_stock.label(class="form-label") }}
+                        {{ form.current_stock(class="form-control", placeholder="0.000", step="0.001") }}
+                        {% if form.current_stock.errors %}
+                            <div class="alert alert-error">
+                                {% for error in form.current_stock.errors %}
+                                    {{ error }}
+                                {% endfor %}
+                            </div>
+                        {% endif %}
+                    </div>
+                    
+                    <div class="form-group">
+                        {{ form.min_stock_level.label(class="form-label") }}
+                        {{ form.min_stock_level(class="form-control", placeholder="0.000", step="0.001") }}
+                        {% if form.min_stock_level.errors %}
+                            <div class="alert alert-error">
+                                {% for error in form.min_stock_level.errors %}
+                                    {{ error }}
+                                {% endfor %}
+                            </div>
+                        {% endif %}
+                    </div>
+                </div>
+                
+                <div class="form-row">
+                    <div class="form-group">
+                        {{ form.reorder_point.label(class="form-label") }}
+                        {{ form.reorder_point(class="form-control", placeholder="0.000", step="0.001") }}
+                        {% if form.reorder_point.errors %}
+                            <div class="alert alert-error">
+                                {% for error in form.reorder_point.errors %}
+                                    {{ error }}
+                                {% endfor %}
+                            </div>
+                        {% endif %}
+                    </div>
+                    
+                    <div class="form-group">
+                        {{ form.expiry_date.label(class="form-label") }}
+                        {{ form.expiry_date(class="form-control", type="date") }}
+                        {% if form.expiry_date.errors %}
+                            <div class="alert alert-error">
+                                {% for error in form.expiry_date.errors %}
+                                    {{ error }}
+                                {% endfor %}
+                            </div>
+                        {% endif %}
+                    </div>
+                </div>
+                
+                <div class="form-group">
+                    <div class="checkbox-group">
+                        {{ form.is_active(class="form-checkbox") }}
+                        <span>Active</span>
+                    </div>
+                    {% if form.is_active.errors %}
+                        <div class="alert alert-error">
+                            {% for error in form.is_active.errors %}
+                                {{ error }}
+                            {% endfor %}
+                        </div>
+                    {% endif %}
+                </div>
+                
+                <div class="form-actions">
+                    {{ form.submit(class="btn btn-primary") }}
+                    <a href="{{ url_for('raw_products') }}" class="btn btn-secondary">Cancel</a>
+                </div>
+            </form>
+        </div>
+    </div>
+</div>
+
+<style>
+.form-container {
+    max-width: 800px;
+    margin: 0 auto;
+    padding: 20px;
+}
+
+.form-row {
+    display: grid;
+    grid-template-columns: 1fr 1fr;
+    gap: 20px;
+}
+
+.form-group {
+    margin-bottom: 20px;
+}
+
+.form-label {
+    display: block;
+    margin-bottom: 8px;
+    font-weight: 600;
+    color: var(--text-primary);
+}
+
+.form-control {
+    width: 100%;
+    padding: 12px;
+    border: 1px solid var(--border-color);
+    border-radius: 8px;
+    background: var(--bg-card);
+    color: var(--text-primary);
+    font-size: 14px;
+    transition: border-color 0.2s, box-shadow 0.2s;
+}
+
+.form-control:focus {
+    outline: none;
+    border-color: var(--accent-blue);
+    box-shadow: 0 0 0 3px rgba(59, 130, 246, 0.1);
+}
+
+.form-control[type="date"] {
+    padding: 11px 12px;
+}
+
+.checkbox-group {
+    display: flex;
+    align-items: center;
+    gap: 10px;
+}
+
+.form-checkbox {
+    width: 18px;
+    height: 18px;
+    accent-color: var(--accent-blue);
+}
+
+.form-actions {
+    display: flex;
+    gap: 15px;
+    margin-top: 30px;
+    padding-top: 20px;
+    border-top: 1px solid var(--border-color);
+}
+
+.alert {
+    padding: 10px 15px;
+    border-radius: 6px;
+    margin-top: 8px;
+    font-size: 14px;
+}
+
+.alert-error {
+    background: rgba(239, 68, 68, 0.1);
+    color: var(--danger);
+    border: 1px solid rgba(239, 68, 68, 0.2);
+}
+
+@media (max-width: 768px) {
+    .form-row {
+        grid-template-columns: 1fr;
+    }
+    
+    .form-actions {
+        flex-direction: column;
+    }
+}
+</style>
+{% endblock %} 

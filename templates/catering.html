@@ -31,6 +31,7 @@
             </div>
             <div class="stat-label">Upcoming Events</div>
         </div>
+        {% if current_user.role.name in ['admin', 'manager', 'staff'] %}
         <div class="stat-card">
             <div class="stat-value">
                 {% set total_revenue = catering_orders.items|selectattr('status', 'ne', 'cancelled')|sum(attribute='total_amount') %}
@@ -38,6 +39,7 @@
             </div>
             <div class="stat-label">Total Revenue</div>
         </div>
+        {% endif %}
         <div class="stat-card">
             <div class="stat-value">
                 {% set total_guests = catering_orders.items|selectattr('guest_count')|sum(attribute='guest_count') %}

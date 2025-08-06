@@ -4,6 +4,12 @@
 
 {% block content %}
 <div class="reports-page">
+    <div class="analytics-section" style="margin-bottom: 20px;">
+        <h2>Comprehensive Analysis of Sales</h2>
+        <p>
+            This page provides a comprehensive analysis of your bakery's sales, revenue by category, order trends, and key business metrics. Use the interactive charts and AI-powered insights below to monitor performance, identify opportunities, and make data-driven decisions for your business growth.
+        </p>
+    </div>
     <div class="page-header">
         <h1 class="header-title">
             <i data-feather="bar-chart-2"></i>
@@ -63,18 +69,21 @@
         <div class="card">
             <div class="card-header">
                 <h3 class="card-title">Sales Trend</h3>
-                <select class="form-control" style="width: auto;" onchange="updateSalesChart(this.value)">
-                    <option value="week">Last 7 Days</option>
-                    <option value="month" selected>Last 30 Days</option>
-                    <option value="quarter">Last 3 Months</option>
-                    <option value="year">Last Year</option>
+                <select class="form-control" style="width: auto;" id="salesPeriodSelect" onchange="updateSalesChart(this.value)">
+                    <option value="7d">Last 7 Days</option>
+                    <option value="30d" selected>Last 30 Days</option>
+                    <option value="90d">Last 3 Months</option>
+                    <option value="all">All Time</option>
                 </select>
             </div>
             <div class="chart-container">
                 <canvas id="salesChart"></canvas>
             </div>
+            <div class="chart-description" style="margin-top: 10px; color: var(--text-muted); font-size: 15px;">
+                <b>What does this mean?</b> This chart shows your revenue trends over the selected period. Spikes or dips may indicate seasonal demand, promotions, or operational issues.<br>
+                <b>Insight:</b> Use this trend to forecast future sales and adjust staffing, inventory, or marketing efforts accordingly.
+            </div>
         </div>
-        
         <!-- Revenue by Category Chart -->
         <div class="card">
             <div class="card-header">
@@ -82,6 +91,10 @@
             </div>
             <div class="chart-container">
                 <canvas id="categoryRevenueChart"></canvas>
+            </div>
+            <div class="chart-description" style="margin-top: 10px; color: var(--text-muted); font-size: 15px;">
+                <b>What does this mean?</b> This chart breaks down your revenue by product category, helping you identify your best and worst performing segments.<br>
+                <b>Insight:</b> Focus on top categories for promotions, and consider strategies to boost underperforming ones.
             </div>
         </div>
     </div>
@@ -345,44 +358,88 @@ function showPredictiveAnalytics() {
     // This would load AI-powered predictive analytics
 }
 
-// Initialize category revenue chart
-document.addEventListener('DOMContentLoaded', function() {
-    const categoryCanvas = document.getElementById('categoryRevenueChart');
-    if (categoryCanvas) {
-        const ctx = categoryCanvas.getContext('2d');
-        
-        new Chart(ctx, {
-            type: 'doughnut',
-            data: {
-                labels: ['Bread', 'Pastries', 'Cakes', 'Cookies', 'Beverages'],
-                datasets: [{
-                    data: [2450, 1890, 1650, 1200, 890],
-                    backgroundColor: [
-                        '#00ffff',
-                        '#ff00ff',
-                        '#00ff00',
-                        '#ffff00',
-                        '#8a2be2'
-                    ],
-                    borderWidth: 2,
-                    borderColor: '#1a1a1a'
-                }]
-            },
-            options: {
-                responsive: true,
-                maintainAspectRatio: false,
-                plugins: {
-                    legend: {
-                        position: 'bottom',
-                        labels: {
-                            color: '#b0b0b0',
-                            padding: 20
+// Dynamic chart update logic
+let salesChartInstance = null;
+let categoryRevenueChartInstance = null;
+
+
+function updateSalesChart(period) {
+    period = period || document.getElementById('salesPeriodSelect').value;
+    fetch(`/api/chart-data?period=${period}`)
+        .then(res => res.json())
+        .then(data => {
+            // Update sales trend chart
+            const salesCanvas = document.getElementById('salesChart');
+            if (salesCanvas) {
+                const ctx = salesCanvas.getContext('2d');
+                if (salesChartInstance) salesChartInstance.destroy();
+                salesChartInstance = new Chart(ctx, {
+                    type: 'line',
+                    data: {
+                        labels: data.revenue_labels,
+                        datasets: [{
+                            label: 'Revenue',
+                            data: data.revenue_data,
+                            backgroundColor: 'rgba(0, 255, 255, 0.1)',
+                            borderColor: '#00ffff',
+                            borderWidth: 2,
+                            fill: true,
+                            tension: 0.4
+                        }]
+                    },
+                    options: {
+                        responsive: true,
+                        maintainAspectRatio: false,
+                        plugins: {
+                            legend: { labels: { color: '#00ffff' } }
+                        },
+                        scales: {
+                            y: {
+                                beginAtZero: true,
+                                grid: { color: 'rgba(255,255,255,0.1)' },
+                                ticks: { color: '#b0b0b0', callback: v => '$' + v }
+                            },
+                            x: {
+                                grid: { color: 'rgba(255,255,255,0.1)' },
+                                ticks: { color: '#b0b0b0' }
+                            }
                         }
                     }
-                }
+                });
             }
-        });
-    }
+            // Update category revenue donut chart
+            const catCanvas = document.getElementById('categoryRevenueChart');
+            if (catCanvas) {
+                const ctx = catCanvas.getContext('2d');
+                if (categoryRevenueChartInstance) categoryRevenueChartInstance.destroy();
+                categoryRevenueChartInstance = new Chart(ctx, {
+                    type: 'doughnut',
+                    data: {
+                        labels: data.donut && data.donut.labels ? data.donut.labels : [],
+                        datasets: [{
+                            data: data.donut && data.donut.data ? data.donut.data : [],
+                            backgroundColor: [
+                                '#00ffff','#ff00ff','#00ff00','#ffff00','#8a2be2','#ffaa00','#00aaff','#ff8800','#00ff88','#b0b0b0'
+                            ],
+                            borderWidth: 2,
+                            borderColor: '#1a1a1a'
+                        }]
+                    },
+                    options: {
+                        responsive: true,
+                        maintainAspectRatio: false,
+                        plugins: {
+                            legend: { position: 'bottom', labels: { color: '#b0b0b0', padding: 20 } }
+                        }
+                    }
+                });
+            }
+        })
+        .catch(() => showNotification('Failed to load chart data', 'error'));
+}
+
+document.addEventListener('DOMContentLoaded', function() {
+    updateSalesChart('30d');
 });
 </script>
 {% endblock %}

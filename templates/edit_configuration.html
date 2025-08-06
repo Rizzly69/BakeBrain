@@ -1,0 +1,198 @@
+{% extends "base.html" %}
+
+{% block title %}Edit Configuration - Smart Bakery Manager{% endblock %}
+
+{% block content %}
+<div class="container-fluid">
+    <div class="row">
+        <div class="col-12">
+            <div class="d-flex justify-content-between align-items-center mb-4">
+                <h1 class="h3 mb-0">Edit Configuration</h1>
+                <a href="{{ url_for('configuration', category=config.category) }}" class="btn btn-outline-secondary">
+                    <i class="fas fa-arrow-left"></i> Back to Configuration
+                </a>
+            </div>
+
+            <div class="card">
+                <div class="card-header">
+                    <h5 class="card-title mb-0">{{ config.key.replace('_', ' ').title() }}</h5>
+                </div>
+                <div class="card-body">
+                    <form method="POST">
+                        {{ form.hidden_tag() }}
+                        
+                        <div class="row">
+                            <div class="col-md-8">
+                                <div class="mb-3">
+                                    <label class="form-label">Configuration Key</label>
+                                    <input type="text" class="form-control" value="{{ config.key }}" readonly>
+                                    <div class="form-text">This is the unique identifier for this configuration setting.</div>
+                                </div>
+                                
+                                <div class="mb-3">
+                                    <label class="form-label">Category</label>
+                                    <input type="text" class="form-control" value="{{ config.category.title() }}" readonly>
+                                </div>
+                                
+                                <div class="mb-3">
+                                    <label class="form-label">Data Type</label>
+                                    <input type="text" class="form-control" value="{{ config.data_type }}" readonly>
+                                </div>
+                                
+                                <div class="mb-3">
+                                    <label for="{{ form.value.id }}" class="form-label">Value</label>
+                                    {% if config.data_type == 'boolean' %}
+                                        <div class="form-check form-switch">
+                                            {{ form.value(class="form-check-input") }}
+                                            <label class="form-check-label" for="{{ form.value.id }}">
+                                                Enable this setting
+                                            </label>
+                                        </div>
+                                    {% elif config.data_type == 'text' %}
+                                        {{ form.value(class="form-control", rows="4") }}
+                                    {% elif config.data_type == 'json' %}
+                                        {{ form.value(class="form-control", rows="6", placeholder='Enter valid JSON format') }}
+                                        <div class="form-text">Enter data in JSON format (e.g., ["item1", "item2"])</div>
+                                    {% elif config.data_type == 'integer' %}
+                                        {{ form.value(class="form-control", type="number", step="1") }}
+                                    {% elif config.data_type == 'float' %}
+                                        {{ form.value(class="form-control", type="number", step="0.01") }}
+                                    {% else %}
+                                        {{ form.value(class="form-control") }}
+                                    {% endif %}
+                                    
+                                    {% if form.value.errors %}
+                                        <div class="invalid-feedback d-block">
+                                            {% for error in form.value.errors %}
+                                                {{ error }}
+                                            {% endfor %}
+                                        </div>
+                                    {% endif %}
+                                </div>
+                                
+                                <div class="mb-3">
+                                    <label for="{{ form.description.id }}" class="form-label">Description</label>
+                                    {{ form.description(class="form-control", rows="3") }}
+                                    <div class="form-text">Optional description of what this setting controls.</div>
+                                </div>
+                            </div>
+                            
+                            <div class="col-md-4">
+                                <div class="card bg-light">
+                                    <div class="card-header">
+                                        <h6 class="card-title mb-0">Configuration Info</h6>
+                                    </div>
+                                    <div class="card-body">
+                                        <dl class="row mb-0">
+                                            <dt class="col-sm-4">Created:</dt>
+                                            <dd class="col-sm-8">{{ config.created_at.strftime('%Y-%m-%d %H:%M') }}</dd>
+                                            
+                                            <dt class="col-sm-4">Updated:</dt>
+                                            <dd class="col-sm-8">{{ config.updated_at.strftime('%Y-%m-%d %H:%M') }}</dd>
+                                            
+                                            <dt class="col-sm-4">Editable:</dt>
+                                            <dd class="col-sm-8">
+                                                {% if config.is_editable %}
+                                                    <span class="badge bg-success">Yes</span>
+                                                {% else %}
+                                                    <span class="badge bg-secondary">No</span>
+                                                {% endif %}
+                                            </dd>
+                                        </dl>
+                                    </div>
+                                </div>
+                                
+                                {% if config.data_type == 'json' %}
+                                <div class="card mt-3">
+                                    <div class="card-header">
+                                        <h6 class="card-title mb-0">JSON Validator</h6>
+                                    </div>
+                                    <div class="card-body">
+                                        <button type="button" class="btn btn-outline-primary btn-sm" onclick="validateJSON()">
+                                            <i class="fas fa-check"></i> Validate JSON
+                                        </button>
+                                        <div id="jsonValidationResult" class="mt-2"></div>
+                                    </div>
+                                </div>
+                                {% endif %}
+                            </div>
+                        </div>
+                        
+                        <div class="d-flex justify-content-between">
+                            <div>
+                                {% if current_user.role.name == 'admin' %}
+                                <button type="button" class="btn btn-outline-warning" onclick="resetToDefault()">
+                                    <i class="fas fa-undo"></i> Reset to Default
+                                </button>
+                                {% endif %}
+                            </div>
+                            <div>
+                                <a href="{{ url_for('configuration', category=config.category) }}" class="btn btn-secondary">
+                                    Cancel
+                                </a>
+                                {{ form.submit(class="btn btn-primary") }}
+                            </div>
+                        </div>
+                    </form>
+                </div>
+            </div>
+        </div>
+    </div>
+</div>
+{% endblock %}
+
+{% block scripts %}
+<script>
+function validateJSON() {
+    const jsonInput = document.getElementById('{{ form.value.id }}');
+    const resultDiv = document.getElementById('jsonValidationResult');
+    
+    try {
+        const parsed = JSON.parse(jsonInput.value);
+        resultDiv.innerHTML = '<div class="alert alert-success"><i class="fas fa-check"></i> Valid JSON format</div>';
+        jsonInput.classList.remove('is-invalid');
+        jsonInput.classList.add('is-valid');
+    } catch (error) {
+        resultDiv.innerHTML = `<div class="alert alert-danger"><i class="fas fa-times"></i> Invalid JSON: ${error.message}</div>`;
+        jsonInput.classList.remove('is-valid');
+        jsonInput.classList.add('is-invalid');
+    }
+}
+
+function resetToDefault() {
+    if (confirm('Are you sure you want to reset this configuration to its default value?')) {
+        fetch('{{ url_for("reset_configuration", config_id=config.id) }}', {
+            method: 'POST',
+            headers: {
+                'Content-Type': 'application/json',
+            }
+        })
+        .then(response => {
+            if (response.ok) {
+                location.reload();
+            } else {
+                alert('Error resetting configuration.');
+            }
+        })
+        .catch(error => {
+            alert('Error resetting configuration: ' + error.message);
+        });
+    }
+}
+
+// Auto-validate JSON on input change
+document.addEventListener('DOMContentLoaded', function() {
+    const jsonInput = document.getElementById('{{ form.value.id }}');
+    if (jsonInput && '{{ config.data_type }}' === 'json') {
+        jsonInput.addEventListener('input', function() {
+            if (this.value.trim()) {
+                validateJSON();
+            } else {
+                document.getElementById('jsonValidationResult').innerHTML = '';
+                this.classList.remove('is-valid', 'is-invalid');
+            }
+        });
+    }
+});
+</script>
+{% endblock %} 

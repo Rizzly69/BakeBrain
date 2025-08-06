@@ -1,0 +1,654 @@
+{% extends "base.html" %}
+
+{% block title %}Schedule Modifications - Smart Bakery Management{% endblock %}
+
+{% block content %}
+<div class="modifications-page">
+    <div class="page-header">
+        <h1 class="header-title">
+            <i data-feather="edit-3"></i>
+            Schedule Modifications
+        </h1>
+        <div class="header-actions">
+            <a href="{{ url_for('weekly_schedule') }}" class="btn btn-secondary">
+                <i data-feather="calendar"></i>
+                Back to Schedule
+            </a>
+            <button class="btn btn-primary" onclick="exportModifications()">
+                <i data-feather="download"></i>
+                Export
+            </button>
+        </div>
+    </div>
+
+    <!-- Filters -->
+    <div class="filters-section">
+        <div class="card">
+            <div class="card-header">
+                <h3 class="card-title">Filters</h3>
+            </div>
+            <div class="card-body">
+                <form method="GET" class="filters-form">
+                    <div class="filter-row">
+                        <div class="filter-group">
+                            <label for="staff_filter">Staff Member:</label>
+                            <select name="staff_id" id="staff_filter" class="form-control">
+                                <option value="">All Staff</option>
+                                {% for staff in staff_members %}
+                                <option value="{{ staff.id }}" {{ 'selected' if request.args.get('staff_id')|int == staff.id }}>
+                                    {{ staff.first_name }} {{ staff.last_name }}
+                                </option>
+                                {% endfor %}
+                            </select>
+                        </div>
+                        <div class="filter-group">
+                            <label for="type_filter">Modification Type:</label>
+                            <select name="type" id="type_filter" class="form-control">
+                                <option value="">All Types</option>
+                                <option value="created" {{ 'selected' if request.args.get('type') == 'created' }}>Created</option>
+                                <option value="updated" {{ 'selected' if request.args.get('type') == 'updated' }}>Updated</option>
+                                <option value="deleted" {{ 'selected' if request.args.get('type') == 'deleted' }}>Deleted</option>
+                            </select>
+                        </div>
+                        <div class="filter-group">
+                            <label for="date_from">From Date:</label>
+                            <input type="date" name="date_from" id="date_from" class="form-control" 
+                                   value="{{ request.args.get('date_from', '') }}">
+                        </div>
+                        <div class="filter-group">
+                            <label for="date_to">To Date:</label>
+                            <input type="date" name="date_to" id="date_to" class="form-control" 
+                                   value="{{ request.args.get('date_to', '') }}">
+                        </div>
+                    </div>
+                    <div class="filter-actions">
+                        <button type="submit" class="btn btn-primary">
+                            <i data-feather="filter"></i>
+                            Apply Filters
+                        </button>
+                        <a href="{{ url_for('modifications') }}" class="btn btn-secondary">
+                            <i data-feather="refresh-cw"></i>
+                            Clear Filters
+                        </a>
+                    </div>
+                </form>
+            </div>
+        </div>
+    </div>
+
+    <!-- Statistics -->
+    <div class="stats-section">
+        <div class="stats-grid">
+            <div class="stat-card">
+                <div class="stat-icon">
+                    <i data-feather="edit-3"></i>
+                </div>
+                <div class="stat-content">
+                    <div class="stat-value">{{ total_modifications }}</div>
+                    <div class="stat-label">Total Modifications</div>
+                </div>
+            </div>
+            <div class="stat-card">
+                <div class="stat-icon">
+                    <i data-feather="plus"></i>
+                </div>
+                <div class="stat-content">
+                    <div class="stat-value">{{ created_count }}</div>
+                    <div class="stat-label">Created</div>
+                </div>
+            </div>
+            <div class="stat-card">
+                <div class="stat-icon">
+                    <i data-feather="edit"></i>
+                </div>
+                <div class="stat-content">
+                    <div class="stat-value">{{ updated_count }}</div>
+                    <div class="stat-label">Updated</div>
+                </div>
+            </div>
+            <div class="stat-card">
+                <div class="stat-icon">
+                    <i data-feather="trash-2"></i>
+                </div>
+                <div class="stat-content">
+                    <div class="stat-value">{{ deleted_count }}</div>
+                    <div class="stat-label">Deleted</div>
+                </div>
+            </div>
+        </div>
+    </div>
+
+    <!-- Modifications List -->
+    <div class="modifications-list">
+        <div class="card">
+            <div class="card-header">
+                <h3 class="card-title">Recent Modifications</h3>
+            </div>
+            <div class="card-body">
+                {% if modifications %}
+                <div class="table-responsive">
+                    <table class="table">
+                        <thead>
+                            <tr>
+                                <th>Date</th>
+                                <th>Staff Member</th>
+                                <th>Type</th>
+                                <th>Changes</th>
+                                <th>Reason</th>
+                                <th>Modified By</th>
+                                <th>Actions</th>
+                            </tr>
+                        </thead>
+                        <tbody>
+                            {% for mod in modifications %}
+                            <tr class="modification-row {{ mod.modification_type }}">
+                                <td>
+                                    <div class="modification-date">
+                                        <div class="date">{{ mod.modified_at.strftime('%b %d, %Y') }}</div>
+                                        <div class="time">{{ mod.modified_at.strftime('%H:%M') }}</div>
+                                    </div>
+                                </td>
+                                <td>
+                                    <div class="staff-info">
+                                        <div class="staff-name">{{ mod.schedule.staff_member.first_name }} {{ mod.schedule.staff_member.last_name }}</div>
+                                        <div class="schedule-date">{{ mod.schedule.date.strftime('%b %d, %Y') }}</div>
+                                    </div>
+                                </td>
+                                <td>
+                                    <span class="badge badge-{{ mod.modification_type }}">
+                                        {{ mod.modification_type.title() }}
+                                    </span>
+                                </td>
+                                <td>
+                                    <div class="changes-summary">
+                                        {% if mod.modification_type == 'created' %}
+                                            <div class="change-item">
+                                                <i data-feather="plus" class="change-icon created"></i>
+                                                <span>{{ mod.new_start_time.strftime('%H:%M') }} - {{ mod.new_end_time.strftime('%H:%M') }}</span>
+                                                {% if mod.new_position %}
+                                                <span class="position">({{ mod.new_position }})</span>
+                                                {% endif %}
+                                            </div>
+                                        {% elif mod.modification_type == 'updated' %}
+                                            {% if mod.old_start_time != mod.new_start_time or mod.old_end_time != mod.new_end_time %}
+                                            <div class="change-item">
+                                                <i data-feather="clock" class="change-icon updated"></i>
+                                                <span>{{ mod.old_start_time.strftime('%H:%M') }} - {{ mod.old_end_time.strftime('%H:%M') }}</span>
+                                                <i data-feather="arrow-right" class="arrow"></i>
+                                                <span>{{ mod.new_start_time.strftime('%H:%M') }} - {{ mod.new_end_time.strftime('%H:%M') }}</span>
+                                            </div>
+                                            {% endif %}
+                                            {% if mod.old_position != mod.new_position %}
+                                            <div class="change-item">
+                                                <i data-feather="user" class="change-icon updated"></i>
+                                                <span>{{ mod.old_position or 'None' }}</span>
+                                                <i data-feather="arrow-right" class="arrow"></i>
+                                                <span>{{ mod.new_position or 'None' }}</span>
+                                            </div>
+                                            {% endif %}
+                                        {% elif mod.modification_type == 'deleted' %}
+                                            <div class="change-item">
+                                                <i data-feather="trash-2" class="change-icon deleted"></i>
+                                                <span>{{ mod.old_start_time.strftime('%H:%M') }} - {{ mod.old_end_time.strftime('%H:%M') }}</span>
+                                                {% if mod.old_position %}
+                                                <span class="position">({{ mod.old_position }})</span>
+                                                {% endif %}
+                                            </div>
+                                        {% endif %}
+                                    </div>
+                                </td>
+                                <td>
+                                    {% if mod.reason %}
+                                    <div class="reason-text" title="{{ mod.reason }}">
+                                        {{ mod.reason[:50] }}{% if mod.reason|length > 50 %}...{% endif %}
+                                    </div>
+                                    {% else %}
+                                    <span class="text-muted">No reason provided</span>
+                                    {% endif %}
+                                </td>
+                                <td>
+                                    <div class="modifier-info">
+                                        <div class="modifier-name">{{ mod.modifier.first_name }} {{ mod.modifier.last_name }}</div>
+                                        <div class="modifier-role">{{ mod.modifier.role.name.title() }}</div>
+                                    </div>
+                                </td>
+                                <td>
+                                    <div class="action-buttons">
+                                        <button class="btn btn-sm btn-outline" onclick="viewModificationDetails({{ mod.id }})" title="View Details">
+                                            <i data-feather="eye"></i>
+                                        </button>
+                                        {% if mod.modification_type == 'deleted' %}
+                                        <button class="btn btn-sm btn-success" onclick="restoreSchedule({{ mod.id }})" title="Restore Schedule">
+                                            <i data-feather="rotate-ccw"></i>
+                                        </button>
+                                        {% endif %}
+                                    </div>
+                                </td>
+                            </tr>
+                            {% endfor %}
+                        </tbody>
+                    </table>
+                </div>
+                
+                <!-- Pagination -->
+                {% if modifications.has_prev or modifications.has_next %}
+                <div class="pagination-wrapper">
+                    <nav aria-label="Modifications pagination">
+                        <ul class="pagination">
+                            {% if modifications.has_prev %}
+                            <li class="page-item">
+                                <a class="page-link" href="{{ url_for('modifications', page=modifications.prev_num, **request.args) }}">
+                                    <i data-feather="chevron-left"></i>
+                                </a>
+                            </li>
+                            {% endif %}
+                            
+                            {% for page_num in modifications.iter_pages() %}
+                                {% if page_num %}
+                                    {% if page_num != modifications.page %}
+                                    <li class="page-item">
+                                        <a class="page-link" href="{{ url_for('modifications', page=page_num, **request.args) }}">{{ page_num }}</a>
+                                    </li>
+                                    {% else %}
+                                    <li class="page-item active">
+                                        <span class="page-link">{{ page_num }}</span>
+                                    </li>
+                                    {% endif %}
+                                {% else %}
+                                <li class="page-item disabled">
+                                    <span class="page-link">...</span>
+                                </li>
+                                {% endif %}
+                            {% endfor %}
+                            
+                            {% if modifications.has_next %}
+                            <li class="page-item">
+                                <a class="page-link" href="{{ url_for('modifications', page=modifications.next_num, **request.args) }}">
+                                    <i data-feather="chevron-right"></i>
+                                </a>
+                            </li>
+                            {% endif %}
+                        </ul>
+                    </nav>
+                </div>
+                {% endif %}
+                
+                {% else %}
+                <div class="empty-state">
+                    <div class="empty-icon">
+                        <i data-feather="edit-3"></i>
+                    </div>
+                    <h3>No Modifications Found</h3>
+                    <p>No schedule modifications match your current filters.</p>
+                    <a href="{{ url_for('modifications') }}" class="btn btn-primary">Clear Filters</a>
+                </div>
+                {% endif %}
+            </div>
+        </div>
+    </div>
+</div>
+
+<style>
+.modifications-page {
+    padding: 20px;
+}
+
+.page-header {
+    display: flex;
+    justify-content: space-between;
+    align-items: center;
+    margin-bottom: 20px;
+}
+
+.header-actions {
+    display: flex;
+    gap: 10px;
+}
+
+.filters-section {
+    margin-bottom: 20px;
+}
+
+.filters-form {
+    display: flex;
+    flex-direction: column;
+    gap: 15px;
+}
+
+.filter-row {
+    display: grid;
+    grid-template-columns: repeat(auto-fit, minmax(200px, 1fr));
+    gap: 15px;
+}
+
+.filter-group {
+    display: flex;
+    flex-direction: column;
+    gap: 5px;
+}
+
+.filter-group label {
+    font-weight: 600;
+    color: var(--text-primary);
+    font-size: 14px;
+}
+
+.filter-actions {
+    display: flex;
+    gap: 10px;
+    justify-content: flex-end;
+}
+
+.stats-section {
+    margin-bottom: 20px;
+}
+
+.stats-grid {
+    display: grid;
+    grid-template-columns: repeat(auto-fit, minmax(200px, 1fr));
+    gap: 15px;
+}
+
+.stat-card {
+    background: var(--bg-card);
+    border: 1px solid var(--border-color);
+    border-radius: 8px;
+    padding: 20px;
+    display: flex;
+    align-items: center;
+    gap: 15px;
+}
+
+.stat-icon {
+    width: 50px;
+    height: 50px;
+    border-radius: 50%;
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    background: var(--accent-blue);
+    color: white;
+}
+
+.stat-icon i {
+    width: 24px;
+    height: 24px;
+}
+
+.stat-content {
+    flex: 1;
+}
+
+.stat-value {
+    font-size: 24px;
+    font-weight: 600;
+    color: var(--text-primary);
+    line-height: 1;
+}
+
+.stat-label {
+    font-size: 12px;
+    color: var(--text-muted);
+    text-transform: uppercase;
+    letter-spacing: 0.5px;
+    margin-top: 5px;
+}
+
+.modifications-list {
+    margin-bottom: 20px;
+}
+
+.table {
+    margin-bottom: 0;
+}
+
+.modification-row {
+    transition: background-color 0.2s;
+}
+
+.modification-row:hover {
+    background-color: var(--bg-secondary);
+}
+
+.modification-row.created {
+    border-left: 4px solid #10b981;
+}
+
+.modification-row.updated {
+    border-left: 4px solid #f59e0b;
+}
+
+.modification-row.deleted {
+    border-left: 4px solid #ef4444;
+}
+
+.modification-date {
+    text-align: center;
+}
+
+.modification-date .date {
+    font-weight: 600;
+    color: var(--text-primary);
+}
+
+.modification-date .time {
+    font-size: 12px;
+    color: var(--text-muted);
+}
+
+.staff-info {
+    display: flex;
+    flex-direction: column;
+    gap: 2px;
+}
+
+.staff-name {
+    font-weight: 600;
+    color: var(--text-primary);
+}
+
+.schedule-date {
+    font-size: 12px;
+    color: var(--text-muted);
+}
+
+.badge {
+    padding: 4px 8px;
+    border-radius: 4px;
+    font-size: 11px;
+    font-weight: 600;
+    text-transform: uppercase;
+    letter-spacing: 0.5px;
+}
+
+.badge-created {
+    background: rgba(16, 185, 129, 0.1);
+    color: #10b981;
+}
+
+.badge-updated {
+    background: rgba(245, 158, 11, 0.1);
+    color: #f59e0b;
+}
+
+.badge-deleted {
+    background: rgba(239, 68, 68, 0.1);
+    color: #ef4444;
+}
+
+.changes-summary {
+    display: flex;
+    flex-direction: column;
+    gap: 5px;
+}
+
+.change-item {
+    display: flex;
+    align-items: center;
+    gap: 8px;
+    font-size: 13px;
+}
+
+.change-icon {
+    width: 14px;
+    height: 14px;
+}
+
+.change-icon.created {
+    color: #10b981;
+}
+
+.change-icon.updated {
+    color: #f59e0b;
+}
+
+.change-icon.deleted {
+    color: #ef4444;
+}
+
+.arrow {
+    width: 12px;
+    height: 12px;
+    color: var(--text-muted);
+}
+
+.position {
+    color: var(--text-muted);
+    font-style: italic;
+}
+
+.reason-text {
+    max-width: 200px;
+    font-size: 13px;
+    color: var(--text-primary);
+}
+
+.modifier-info {
+    display: flex;
+    flex-direction: column;
+    gap: 2px;
+}
+
+.modifier-name {
+    font-weight: 600;
+    color: var(--text-primary);
+    font-size: 13px;
+}
+
+.modifier-role {
+    font-size: 11px;
+    color: var(--text-muted);
+    text-transform: uppercase;
+    letter-spacing: 0.5px;
+}
+
+.action-buttons {
+    display: flex;
+    gap: 5px;
+}
+
+.btn-sm {
+    padding: 4px 8px;
+    font-size: 12px;
+}
+
+.empty-state {
+    text-align: center;
+    padding: 60px 20px;
+}
+
+.empty-icon {
+    width: 80px;
+    height: 80px;
+    margin: 0 auto 20px;
+    border-radius: 50%;
+    background: var(--bg-secondary);
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    color: var(--text-muted);
+}
+
+.empty-icon i {
+    width: 40px;
+    height: 40px;
+}
+
+.empty-state h3 {
+    margin-bottom: 10px;
+    color: var(--text-primary);
+}
+
+.empty-state p {
+    color: var(--text-muted);
+    margin-bottom: 20px;
+}
+
+.pagination-wrapper {
+    margin-top: 20px;
+    display: flex;
+    justify-content: center;
+}
+
+@media (max-width: 768px) {
+    .page-header {
+        flex-direction: column;
+        gap: 15px;
+        align-items: stretch;
+    }
+    
+    .filter-row {
+        grid-template-columns: 1fr;
+    }
+    
+    .stats-grid {
+        grid-template-columns: repeat(2, 1fr);
+    }
+    
+    .table-responsive {
+        font-size: 12px;
+    }
+    
+    .action-buttons {
+        flex-direction: column;
+    }
+}
+</style>
+
+<script>
+function viewModificationDetails(modificationId) {
+    // Show modification details in a modal
+    showNotification('Modification details view coming soon!', 'info');
+}
+
+function restoreSchedule(modificationId) {
+    if (confirm('Are you sure you want to restore this schedule?')) {
+        fetch(`/api/schedule/restore/${modificationId}`, {
+            method: 'POST',
+            headers: {
+                'Content-Type': 'application/json',
+            }
+        })
+        .then(response => response.json())
+        .then(data => {
+            if (data.success) {
+                showNotification('Schedule restored successfully!', 'success');
+                setTimeout(() => {
+                    window.location.reload();
+                }, 1000);
+            } else {
+                showNotification(data.message || 'Failed to restore schedule', 'error');
+            }
+        })
+        .catch(error => {
+            showNotification('Error restoring schedule', 'error');
+        });
+    }
+}
+
+function exportModifications() {
+    const params = new URLSearchParams(window.location.search);
+    window.open(`/api/modifications/export?${params.toString()}`, '_blank');
+}
+</script>
+{% endblock %} 

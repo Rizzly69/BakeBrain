@@ -1,0 +1,375 @@
+{% extends "base.html" %}
+
+{% block title %}Raw Products - Smart Bakery Management{% endblock %}
+
+{% block content %}
+<div class="raw-products-page">
+    <div class="page-header">
+        <h1 class="header-title">
+            <i data-feather="layers"></i>
+            Raw Materials Management
+        </h1>
+        <div class="header-actions">
+            {% if current_user.role.name in ['admin', 'manager'] %}
+            <a href="{{ url_for('new_raw_product') }}" class="btn btn-primary">
+                <i data-feather="plus"></i>
+                Add Raw Material
+            </a>
+            {% endif %}
+            <a href="{{ url_for('inventory') }}" class="btn btn-secondary">
+                <i data-feather="package"></i>
+                Finished Products
+            </a>
+        </div>
+    </div>
+
+    <!-- Search and Filter Bar -->
+    <div class="filter-section">
+        <form method="GET" class="search-form">
+            <div class="search-group">
+                <input type="text" 
+                       name="search" 
+                       value="{{ search }}" 
+                       placeholder="Search raw materials..." 
+                       class="form-control search-input">
+                <button type="submit" class="btn btn-primary">
+                    <i data-feather="search"></i>
+                </button>
+            </div>
+            
+            {% if search %}
+            <a href="{{ url_for('raw_products') }}" class="btn btn-outline">Clear Filters</a>
+            {% endif %}
+        </form>
+    </div>
+
+    <!-- Raw Products Table -->
+    {% if raw_products.items %}
+    <div class="card">
+        <div class="card-header">
+            <h3 class="card-title">Raw Materials Inventory</h3>
+        </div>
+        
+        <div class="table-container">
+            <table class="table">
+                <thead>
+                    <tr>
+                        <th>Material Name</th>
+                        <th>Unit</th>
+                        <th>Current Stock</th>
+                        <th>Min Level</th>
+                        <th>Reorder Point</th>
+                        <th>Cost/Unit</th>
+                        <th>Supplier</th>
+                        <th>Location</th>
+                        <th>Status</th>
+                        <th>Last Updated</th>
+                        <th>Actions</th>
+                    </tr>
+                </thead>
+                <tbody>
+                    {% for raw_product in raw_products.items %}
+                    <tr class="{{ 'low-stock-row' if raw_product.is_low_stock() else '' }}">
+                        <td>
+                            <div style="font-weight: 600;">{{ raw_product.name }}</div>
+                            {% if raw_product.description %}
+                            <div style="font-size: 12px; color: var(--text-muted);">
+                                {{ raw_product.description[:50] }}{% if raw_product.description|length > 50 %}...{% endif %}
+                            </div>
+                            {% endif %}
+                        </td>
+                        <td>{{ raw_product.unit_of_measure }}</td>
+                        <td>
+                            <span class="stock-amount {{ 'low-stock' if raw_product.is_low_stock() else 'in-stock' }}">
+                                {{ "%.3f"|format(raw_product.current_stock) }}
+                            </span>
+                        </td>
+                        <td>{{ "%.3f"|format(raw_product.min_stock_level) }}</td>
+                        <td>{{ "%.3f"|format(raw_product.reorder_point) }}</td>
+                        <td>${{ "%.2f"|format(raw_product.cost_per_unit) }}</td>
+                        <td>
+                            {% if raw_product.supplier %}
+                            <div>{{ raw_product.supplier }}</div>
+                            {% if raw_product.supplier_contact %}
+                            <div style="font-size: 12px; color: var(--text-muted);">{{ raw_product.supplier_contact }}</div>
+                            {% endif %}
+                            {% else %}
+                            <span style="color: var(--text-muted);">Not specified</span>
+                            {% endif %}
+                        </td>
+                        <td>{{ raw_product.location }}</td>
+                        <td>
+                            {% if raw_product.is_critical_stock() %}
+                            <span class="status-badge critical">Critical</span>
+                            {% elif raw_product.is_low_stock() %}
+                            <span class="status-badge warning">Low Stock</span>
+                            {% else %}
+                            <span class="status-badge success">In Stock</span>
+                            {% endif %}
+                        </td>
+                        <td>
+                            <div style="font-size: 12px;">
+                                {{ raw_product.last_updated.strftime('%Y-%m-%d') }}
+                            </div>
+                            <div style="font-size: 11px; color: var(--text-muted);">
+                                {{ raw_product.last_updated.strftime('%H:%M') }}
+                            </div>
+                        </td>
+                        <td>
+                            <div class="action-buttons">
+                                {% if current_user.role.name in ['admin', 'manager', 'staff'] %}
+                                <a href="{{ url_for('update_raw_product_stock', raw_product_id=raw_product.id) }}" 
+                                   class="btn btn-sm btn-primary" title="Update Stock">
+                                    <i data-feather="edit-3"></i>
+                                </a>
+                                {% endif %}
+                                
+                                {% if current_user.role.name in ['admin', 'manager'] %}
+                                <a href="{{ url_for('edit_raw_product', raw_product_id=raw_product.id) }}" 
+                                   class="btn btn-sm btn-secondary" title="Edit">
+                                    <i data-feather="edit"></i>
+                                </a>
+                                {% endif %}
+                                
+                                {% if raw_product.supplier_contact %}
+                                <button class="btn btn-sm btn-outline" 
+                                        onclick="orderRawMaterial('{{ raw_product.name }}', '{{ raw_product.supplier_contact }}')"
+                                        title="Order from Supplier">
+                                    <i data-feather="phone"></i>
+                                </button>
+                                {% endif %}
+                            </div>
+                        </td>
+                    </tr>
+                    {% endfor %}
+                </tbody>
+            </table>
+        </div>
+
+        <!-- Pagination -->
+        {% if raw_products.pages > 1 %}
+        <div class="pagination-container">
+            <nav class="pagination">
+                {% if raw_products.has_prev %}
+                <a href="{{ url_for('raw_products', page=raw_products.prev_num, search=search) }}" 
+                   class="pagination-link">
+                    <i data-feather="chevron-left"></i>
+                    Previous
+                </a>
+                {% endif %}
+                
+                <div class="pagination-info">
+                    Page {{ raw_products.page }} of {{ raw_products.pages }}
+                    ({{ raw_products.total }} raw materials)
+                </div>
+                
+                {% if raw_products.has_next %}
+                <a href="{{ url_for('raw_products', page=raw_products.next_num, search=search) }}" 
+                   class="pagination-link">
+                    Next
+                    <i data-feather="chevron-right"></i>
+                </a>
+                {% endif %}
+            </nav>
+        </div>
+        {% endif %}
+    </div>
+
+    {% else %}
+    <!-- Empty State -->
+    <div class="empty-state">
+        <div class="empty-icon">
+            <i data-feather="layers" style="width: 64px; height: 64px; opacity: 0.3;"></i>
+        </div>
+        <h3>No Raw Materials Found</h3>
+        {% if search %}
+        <p>No raw materials match your search criteria.</p>
+        <a href="{{ url_for('raw_products') }}" class="btn btn-primary">Clear Search</a>
+        {% else %}
+        <p>Start adding raw materials to your inventory.</p>
+        {% if current_user.role.name in ['admin', 'manager'] %}
+        <a href="{{ url_for('new_raw_product') }}" class="btn btn-primary">
+            <i data-feather="plus"></i>
+            Add First Raw Material
+        </a>
+        {% endif %}
+        {% endif %}
+    </div>
+    {% endif %}
+</div>
+
+<style>
+.filter-section {
+    background: var(--bg-card);
+    border-radius: 12px;
+    padding: 20px;
+    margin-bottom: 30px;
+    border: 1px solid var(--border-color);
+}
+
+.search-form {
+    display: flex;
+    gap: 15px;
+    align-items: center;
+    flex-wrap: wrap;
+}
+
+.search-group {
+    display: flex;
+    gap: 10px;
+    flex: 1;
+    min-width: 300px;
+}
+
+.search-input {
+    flex: 1;
+}
+
+.table-container {
+    overflow-x: auto;
+}
+
+.table {
+    width: 100%;
+    border-collapse: collapse;
+}
+
+.table th,
+.table td {
+    padding: 12px;
+    text-align: left;
+    border-bottom: 1px solid var(--border-color);
+}
+
+.table th {
+    background: var(--bg-tertiary);
+    font-weight: 600;
+    color: var(--text-primary);
+}
+
+.low-stock-row {
+    background: rgba(255, 170, 0, 0.05);
+}
+
+.stock-amount {
+    font-weight: 600;
+}
+
+.stock-amount.low-stock {
+    color: var(--warning);
+}
+
+.stock-amount.in-stock {
+    color: var(--success);
+}
+
+.status-badge {
+    padding: 4px 8px;
+    border-radius: 12px;
+    font-size: 12px;
+    font-weight: 500;
+}
+
+.status-badge.critical {
+    background: rgba(239, 68, 68, 0.1);
+    color: var(--danger);
+}
+
+.status-badge.warning {
+    background: rgba(255, 170, 0, 0.1);
+    color: var(--warning);
+}
+
+.status-badge.success {
+    background: rgba(34, 197, 94, 0.1);
+    color: var(--success);
+}
+
+.action-buttons {
+    display: flex;
+    gap: 5px;
+    flex-wrap: wrap;
+}
+
+.pagination-container {
+    display: flex;
+    justify-content: center;
+    margin-top: 30px;
+}
+
+.pagination {
+    display: flex;
+    align-items: center;
+    gap: 20px;
+    padding: 20px;
+    background: var(--bg-card);
+    border-radius: 12px;
+    border: 1px solid var(--border-color);
+}
+
+.pagination-link {
+    display: flex;
+    align-items: center;
+    gap: 5px;
+    padding: 8px 12px;
+    background: var(--accent-blue);
+    color: white;
+    text-decoration: none;
+    border-radius: 6px;
+    transition: background-color 0.2s;
+}
+
+.pagination-link:hover {
+    background: var(--accent-blue-dark);
+}
+
+.pagination-info {
+    color: var(--text-muted);
+    font-size: 14px;
+}
+
+.empty-state {
+    text-align: center;
+    padding: 60px 20px;
+}
+
+.empty-icon {
+    margin-bottom: 20px;
+}
+
+@media (max-width: 768px) {
+    .search-form {
+        flex-direction: column;
+        align-items: stretch;
+    }
+    
+    .search-group {
+        min-width: auto;
+    }
+    
+    .header-actions {
+        flex-direction: column;
+        gap: 10px;
+    }
+    
+    .table {
+        font-size: 14px;
+    }
+    
+    .action-buttons {
+        flex-direction: column;
+    }
+}
+</style>
+
+<script>
+function orderRawMaterial(materialName, supplierContact) {
+    if (supplierContact) {
+        showNotification(`Ordering ${materialName} from ${supplierContact}`, 'info');
+        // In a real application, this could open a phone dialer or email client
+    } else {
+        showNotification(`No supplier contact available for ${materialName}`, 'warning');
+    }
+}
+</script>
+{% endblock %} 

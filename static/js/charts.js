@@ -95,10 +95,25 @@ function createSalesChart(canvas) {
 function createOrdersChart(canvas) {
     const ctx = canvas.getContext('2d');
     
+    // Use real data if available, otherwise use sample data
+    const orderStatusData = window.chartData ? window.chartData.orderStatusData : {
+        pending: 3,
+        confirmed: 5,
+        in_preparation: 2,
+        ready: 1,
+        delivered: 4
+    };
+    
     const orderData = {
         labels: ['Pending', 'Confirmed', 'In Progress', 'Ready', 'Delivered'],
         datasets: [{
-            data: [15, 25, 10, 8, 42],
+            data: [
+                orderStatusData.pending || 0,
+                orderStatusData.confirmed || 0,
+                orderStatusData.in_preparation || 0,
+                orderStatusData.ready || 0,
+                orderStatusData.delivered || 0
+            ],
             backgroundColor: [
                 '#ffaa00',
                 '#00aaff',
@@ -199,22 +214,18 @@ function createInventoryChart(canvas) {
 function createRevenueTrendChart(canvas) {
     const ctx = canvas.getContext('2d');
     
-    const revenueData = {
-        labels: ['Jan', 'Feb', 'Mar', 'Apr', 'May', 'Jun'],
+    // Use real data if available, otherwise use sample data
+    const revenueData = window.chartData ? window.chartData.revenueData : [1200, 1900, 3000, 5000, 2000, 3000];
+    const revenueLabels = window.chartData ? window.chartData.revenueLabels : ['Jan', 'Feb', 'Mar', 'Apr', 'May', 'Jun'];
+    
+    const chartData = {
+        labels: revenueLabels,
         datasets: [
             {
-                label: 'Regular Orders',
-                data: [1200, 1900, 3000, 5000, 2000, 3000],
+                label: 'Daily Revenue',
+                data: revenueData,
                 backgroundColor: 'rgba(0, 255, 255, 0.1)',
                 borderColor: '#00ffff',
-                borderWidth: 2,
-                fill: false
-            },
-            {
-                label: 'Catering Orders',
-                data: [800, 1200, 1500, 2200, 1800, 2500],
-                backgroundColor: 'rgba(255, 0, 255, 0.1)',
-                borderColor: '#ff00ff',
                 borderWidth: 2,
                 fill: false
             }
@@ -223,7 +234,7 @@ function createRevenueTrendChart(canvas) {
     
     new Chart(ctx, {
         type: 'line',
-        data: revenueData,
+        data: chartData,
         options: {
             responsive: true,
             maintainAspectRatio: false,

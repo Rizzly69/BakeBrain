@@ -1,0 +1,371 @@
+{% extends "base.html" %}
+
+{% block title %}Manage Schedule - {{ staff_member.first_name }} {{ staff_member.last_name }}{% endblock %}
+
+{% block content %}
+<div class="schedule-page">
+    <div class="page-header">
+        <h1 class="header-title">
+            <i data-feather="calendar"></i>
+            Manage Schedule: {{ staff_member.first_name }} {{ staff_member.last_name }}
+        </h1>
+        <div class="header-actions">
+            <a href="{{ url_for('staff') }}" class="btn btn-secondary">
+                <i data-feather="arrow-left"></i>
+                Back to Staff
+            </a>
+        </div>
+    </div>
+    
+    <div class="schedule-container">
+        <!-- Add/Edit Schedule Form -->
+        <div class="card">
+            <div class="card-header">
+                <h3 class="card-title">
+                    <i data-feather="plus"></i>
+                    Add/Edit Schedule
+                </h3>
+            </div>
+            <div class="card-body">
+                <form method="POST" class="schedule-form">
+                    <div class="form-row">
+                        <div class="form-group">
+                            <label for="date" class="form-label">Date *</label>
+                            <input type="date" id="date" name="date" class="form-control" required 
+                                   value="{{ start_of_week.strftime('%Y-%m-%d') }}">
+                        </div>
+                        
+                        <div class="form-group">
+                            <label for="position" class="form-label">Position</label>
+                            <select id="position" name="position" class="form-control">
+                                <option value="">Select Position</option>
+                                <option value="Cashier">Cashier</option>
+                                <option value="Baker">Baker</option>
+                                <option value="Kitchen Staff">Kitchen Staff</option>
+                                <option value="Server">Server</option>
+                                <option value="Manager">Manager</option>
+                                <option value="General Staff">General Staff</option>
+                            </select>
+                        </div>
+                    </div>
+                    
+                    <div class="form-row">
+                        <div class="form-group">
+                            <label for="start_time" class="form-label">Start Time *</label>
+                            <input type="time" id="start_time" name="start_time" class="form-control" required 
+                                   value="09:00">
+                        </div>
+                        
+                        <div class="form-group">
+                            <label for="end_time" class="form-label">End Time *</label>
+                            <input type="time" id="end_time" name="end_time" class="form-control" required 
+                                   value="17:00">
+                        </div>
+                    </div>
+                    
+                    <div class="form-group">
+                        <label for="notes" class="form-label">Notes</label>
+                        <textarea id="notes" name="notes" class="form-control" rows="3" 
+                                  placeholder="Any special instructions or notes..."></textarea>
+                    </div>
+                    
+                    <div class="form-actions">
+                        <button type="submit" class="btn btn-primary">
+                            <i data-feather="save"></i>
+                            Save Schedule
+                        </button>
+                        <button type="button" class="btn btn-secondary" onclick="clearForm()">
+                            <i data-feather="refresh-cw"></i>
+                            Clear Form
+                        </button>
+                    </div>
+                </form>
+            </div>
+        </div>
+        
+        <!-- Current Week Schedule -->
+        <div class="card">
+            <div class="card-header">
+                <h3 class="card-title">
+                    <i data-feather="calendar"></i>
+                    Current Week Schedule
+                </h3>
+                <div class="week-info">
+                    {{ start_of_week.strftime('%B %d') }} - {{ end_of_week.strftime('%B %d, %Y') }}
+                </div>
+            </div>
+            
+            <div class="week-schedule">
+                {% for i in range(7) %}
+                    {% set current_date = start_of_week + timedelta(days=i) %}
+                    {% set day_schedule = week_schedule|selectattr('date', 'equalto', current_date)|first %}
+                    
+                    <div class="day-schedule {{ 'has-schedule' if day_schedule else 'no-schedule' }}">
+                        <div class="day-header">
+                            <div class="day-name">{{ current_date.strftime('%A') }}</div>
+                            <div class="day-date">{{ current_date.strftime('%b %d') }}</div>
+                        </div>
+                        
+                        {% if day_schedule %}
+                            <div class="schedule-info">
+                                <div class="time-range">
+                                    <i data-feather="clock"></i>
+                                    {{ day_schedule.start_time.strftime('%H:%M') }} - {{ day_schedule.end_time.strftime('%H:%M') }}
+                                </div>
+                                {% if day_schedule.position %}
+                                <div class="position">
+                                    <i data-feather="briefcase"></i>
+                                    {{ day_schedule.position }}
+                                </div>
+                                {% endif %}
+                                {% if day_schedule.notes %}
+                                <div class="notes">
+                                    <i data-feather="file-text"></i>
+                                    {{ day_schedule.notes }}
+                                </div>
+                                {% endif %}
+                                <div class="schedule-actions">
+                                    <button class="btn btn-sm btn-primary" onclick="editSchedule('{{ current_date.strftime('%Y-%m-%d') }}', '{{ day_schedule.start_time.strftime('%H:%M') }}', '{{ day_schedule.end_time.strftime('%H:%M') }}', '{{ day_schedule.position or '' }}', '{{ day_schedule.notes or '' }}')">
+                                        <i data-feather="edit-2"></i>
+                                    </button>
+                                    <button class="btn btn-sm btn-danger" onclick="deleteSchedule('{{ current_date.strftime('%Y-%m-%d') }}')">
+                                        <i data-feather="trash-2"></i>
+                                    </button>
+                                </div>
+                            </div>
+                        {% else %}
+                            <div class="no-schedule">
+                                <i data-feather="x-circle"></i>
+                                <span>No schedule</span>
+                            </div>
+                        {% endif %}
+                    </div>
+                {% endfor %}
+            </div>
+        </div>
+    </div>
+</div>
+
+<style>
+.schedule-page {
+    padding: 20px;
+}
+
+.page-header {
+    display: flex;
+    justify-content: space-between;
+    align-items: center;
+    margin-bottom: 20px;
+}
+
+.header-actions {
+    display: flex;
+    gap: 10px;
+}
+
+.schedule-container {
+    display: grid;
+    gap: 20px;
+}
+
+.form-row {
+    display: grid;
+    grid-template-columns: 1fr 1fr;
+    gap: 20px;
+}
+
+.form-group {
+    margin-bottom: 20px;
+}
+
+.form-label {
+    display: block;
+    margin-bottom: 8px;
+    font-weight: 600;
+    color: var(--text-primary);
+}
+
+.form-control {
+    width: 100%;
+    padding: 12px;
+    border: 1px solid var(--border-color);
+    border-radius: 8px;
+    background: var(--bg-card);
+    color: var(--text-primary);
+    font-size: 14px;
+    transition: border-color 0.2s, box-shadow 0.2s;
+}
+
+.form-control:focus {
+    outline: none;
+    border-color: var(--accent-blue);
+    box-shadow: 0 0 0 3px rgba(59, 130, 246, 0.1);
+}
+
+.form-actions {
+    display: flex;
+    gap: 15px;
+    margin-top: 20px;
+}
+
+.week-info {
+    color: var(--text-muted);
+    font-size: 14px;
+}
+
+.week-schedule {
+    display: grid;
+    grid-template-columns: repeat(auto-fit, minmax(200px, 1fr));
+    gap: 15px;
+    padding: 20px;
+}
+
+.day-schedule {
+    background: var(--bg-tertiary);
+    border-radius: 8px;
+    padding: 15px;
+    border: 1px solid var(--border-color);
+    transition: all 0.2s;
+}
+
+.day-schedule.has-schedule {
+    background: rgba(59, 130, 246, 0.1);
+    border-color: var(--accent-blue);
+}
+
+.day-schedule.no-schedule {
+    background: var(--bg-secondary);
+    opacity: 0.7;
+}
+
+.day-header {
+    text-align: center;
+    margin-bottom: 15px;
+    padding-bottom: 10px;
+    border-bottom: 1px solid var(--border-color);
+}
+
+.day-name {
+    font-weight: 600;
+    color: var(--text-primary);
+    font-size: 16px;
+}
+
+.day-date {
+    color: var(--text-muted);
+    font-size: 12px;
+    margin-top: 2px;
+}
+
+.schedule-info {
+    display: flex;
+    flex-direction: column;
+    gap: 8px;
+}
+
+.time-range, .position, .notes {
+    display: flex;
+    align-items: center;
+    gap: 8px;
+    font-size: 14px;
+    color: var(--text-secondary);
+}
+
+.time-range i, .position i, .notes i {
+    width: 14px;
+    height: 14px;
+    color: var(--accent-blue);
+}
+
+.schedule-actions {
+    display: flex;
+    gap: 5px;
+    margin-top: 10px;
+    justify-content: center;
+}
+
+.btn-sm {
+    padding: 4px 8px;
+    font-size: 12px;
+}
+
+.no-schedule {
+    display: flex;
+    flex-direction: column;
+    align-items: center;
+    gap: 8px;
+    color: var(--text-muted);
+    font-size: 14px;
+}
+
+.no-schedule i {
+    width: 24px;
+    height: 24px;
+}
+
+@media (max-width: 768px) {
+    .page-header {
+        flex-direction: column;
+        gap: 15px;
+        align-items: stretch;
+    }
+    
+    .form-row {
+        grid-template-columns: 1fr;
+    }
+    
+    .week-schedule {
+        grid-template-columns: 1fr;
+    }
+    
+    .form-actions {
+        flex-direction: column;
+    }
+}
+</style>
+
+<script>
+function editSchedule(date, startTime, endTime, position, notes) {
+    document.getElementById('date').value = date;
+    document.getElementById('start_time').value = startTime;
+    document.getElementById('end_time').value = endTime;
+    document.getElementById('position').value = position;
+    document.getElementById('notes').value = notes;
+    
+    // Scroll to form
+    document.querySelector('.schedule-form').scrollIntoView({ behavior: 'smooth' });
+}
+
+function deleteSchedule(date) {
+    if (confirm(`Are you sure you want to delete the schedule for ${date}?`)) {
+        // Create a form to submit the deletion
+        const form = document.createElement('form');
+        form.method = 'POST';
+        form.action = '{{ url_for("manage_staff_schedule", staff_id=staff_member.id) }}';
+        
+        const actionInput = document.createElement('input');
+        actionInput.type = 'hidden';
+        actionInput.name = 'action';
+        actionInput.value = 'delete';
+        
+        const dateInput = document.createElement('input');
+        dateInput.type = 'hidden';
+        dateInput.name = 'delete_date';
+        dateInput.value = date;
+        
+        form.appendChild(actionInput);
+        form.appendChild(dateInput);
+        document.body.appendChild(form);
+        form.submit();
+    }
+}
+
+function clearForm() {
+    document.getElementById('date').value = '{{ start_of_week.strftime("%Y-%m-%d") }}';
+    document.getElementById('start_time').value = '09:00';
+    document.getElementById('end_time').value = '17:00';
+    document.getElementById('position').value = '';
+    document.getElementById('notes').value = '';
+}
+</script>
+{% endblock %} 

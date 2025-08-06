@@ -598,7 +598,8 @@ function implementForecast(insightId) {
 }
 
 function viewDetails(insightId) {
-    showNotification('Detailed analytics view would open here', 'info');
+    // Redirect to the detailed analytics page, optionally passing the insight id as a query param
+    window.location.href = '/detailed-analytics' + (insightId ? ('?insight_id=' + insightId) : '');
 }
 
 function applyPricing(insightId) {

@@ -1,0 +1,147 @@
+{% extends "base.html" %}
+
+{% block title %}Baker Dashboard - Smart Bakery Management{% endblock %}
+
+{% block content %}
+<div class="dashboard">
+    <h1 class="header-title">
+        <i data-feather="coffee"></i>
+        Baker Dashboard
+    </h1>
+    
+    <!-- Baker Stats -->
+    <div class="stats-grid">
+        <div class="stat-card">
+            <div class="stat-value">{{ stats.production_orders or 0 }}</div>
+            <div class="stat-label">Production Orders</div>
+        </div>
+        <div class="stat-card">
+            <div class="stat-value">{{ stats.completed_today or 0 }}</div>
+            <div class="stat-label">Completed Today</div>
+        </div>
+        <div class="stat-card">
+            <div class="stat-value">{{ stats.low_stock_items or 0 }}</div>
+            <div class="stat-label">Low Stock Items</div>
+        </div>
+    </div>
+    
+    <!-- Production Orders -->
+    {% if production_orders %}
+    <div class="card">
+        <div class="card-header">
+            <h3 class="card-title">Production Orders</h3>
+        </div>
+        <div class="table-container">
+            <table class="table">
+                <thead>
+                    <tr>
+                        <th>Order #</th>
+                        <th>Customer</th>
+                        <th>Items</th>
+                        <th>Status</th>
+                        <th>Actions</th>
+                    </tr>
+                </thead>
+                <tbody>
+                    {% for order in production_orders %}
+                    <tr>
+                        <td>{{ order.order_number }}</td>
+                        <td>{{ order.customer.first_name }} {{ order.customer.last_name }}</td>
+                        <td>
+                            {% for item in order.items %}
+                                <span class="badge badge-info">{{ item.quantity }}x {{ item.product.name }}</span>
+                            {% endfor %}
+                        </td>
+                        <td>
+                            <span class="badge badge-{{ 'info' if order.status.value == 'confirmed' else 'warning' }}">
+                                {{ order.status.value.replace('_', ' ').title() }}
+                            </span>
+                        </td>
+                        <td>
+                            {% if order.status.value == 'confirmed' %}
+                            <button class="btn btn-secondary btn-sm" onclick="updateOrderStatus({{ order.id }}, 'in_preparation')">
+                                Start Baking
+                            </button>
+                            {% elif order.status.value == 'in_preparation' %}
+                            <button class="btn btn-success btn-sm" onclick="updateOrderStatus({{ order.id }}, 'ready')">
+                                Mark Ready
+                            </button>
+                            {% endif %}
+                        </td>
+                    </tr>
+                    {% endfor %}
+                </tbody>
+            </table>
+        </div>
+    </div>
+    {% endif %}
+    
+    <!-- Low Stock Alerts -->
+    {% if low_stock_items %}
+    <div class="card">
+        <div class="card-header">
+            <h3 class="card-title">Low Stock Alerts</h3>
+        </div>
+        <div class="table-container">
+            <table class="table">
+                <thead>
+                    <tr>
+                        <th>Product</th>
+                        <th>Current Stock</th>
+                        <th>Min Level</th>
+                        <th>Status</th>
+                    </tr>
+                </thead>
+                <tbody>
+                    {% for item in low_stock_items %}
+                    <tr>
+                        <td>{{ item.product.name }}</td>
+                        <td>{{ item.quantity }}</td>
+                        <td>{{ item.min_stock_level }}</td>
+                        <td>
+                            <span class="badge badge-danger">Low Stock</span>
+                        </td>
+                    </tr>
+                    {% endfor %}
+                </tbody>
+            </table>
+        </div>
+    </div>
+    {% endif %}
+    
+    <!-- Quick Actions -->
+    <div class="card">
+        <div class="card-header">
+            <h3 class="card-title">Quick Actions</h3>
+        </div>
+        <div class="quick-actions">
+            <a href="{{ url_for('inventory') }}" class="btn btn-primary">
+                <i data-feather="package"></i>
+                View Inventory
+            </a>
+            <a href="{{ url_for('orders') }}" class="btn btn-secondary">
+                <i data-feather="list"></i>
+                All Orders
+            </a>
+        </div>
+    </div>
+</div>
+
+<style>
+.quick-actions {
+    display: flex;
+    gap: 15px;
+    padding: 20px;
+    flex-wrap: wrap;
+}
+
+.btn-sm {
+    padding: 6px 12px;
+    font-size: 12px;
+}
+
+.badge {
+    margin: 2px;
+}
+</style>
+{% endblock %} 

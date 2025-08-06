@@ -10,13 +10,15 @@
             Staff Management
         </h1>
         <div class="header-actions">
-            <a href="#" class="btn btn-primary" onclick="showAddStaffModal()">
+            {% if current_user.role.name == 'admin' %}
+            <a href="{{ url_for('new_staff') }}" class="btn btn-primary">
                 <i data-feather="user-plus"></i>
-                Add Staff Member
+                Add Staff/Manager
             </a>
-            <a href="#" class="btn btn-secondary" onclick="showScheduleModal()">
+            {% endif %}
+            <a href="{{ url_for('weekly_schedule') }}" class="btn btn-secondary">
                 <i data-feather="calendar"></i>
-                Manage Schedules
+                Weekly Schedule
             </a>
         </div>
     </div>
@@ -126,7 +128,7 @@
                                 {{ staff.first_name }} {{ staff.last_name }}
                             </div>
                             <div style="font-size: 12px; color: var(--text-muted);">
-                                ID: {{ staff.id }}
+                                {{ staff.role.name.title() }} • ID: {{ staff.id }}
                             </div>
                         </td>
                         <td>
@@ -176,16 +178,18 @@
                                         data-tooltip="View details">
                                     <i data-feather="eye" style="width: 14px; height: 14px;"></i>
                                 </button>
-                                <button class="btn btn-primary" style="font-size: 12px; padding: 4px 8px;"
-                                        onclick="editStaff({{ staff.id }})"
-                                        data-tooltip="Edit staff">
+                                {% if current_user.role.name == 'admin' %}
+                                <a href="{{ url_for('edit_staff', staff_id=staff.id) }}" 
+                                   class="btn btn-primary" style="font-size: 12px; padding: 4px 8px;"
+                                   data-tooltip="Edit staff">
                                     <i data-feather="edit" style="width: 14px; height: 14px;"></i>
-                                </button>
-                                <button class="btn btn-success" style="font-size: 12px; padding: 4px 8px;"
-                                        onclick="manageSchedule({{ staff.id }})"
-                                        data-tooltip="Manage schedule">
+                                </a>
+                                {% endif %}
+                                <a href="{{ url_for('manage_staff_schedule', staff_id=staff.id) }}" 
+                                   class="btn btn-success" style="font-size: 12px; padding: 4px 8px;"
+                                   data-tooltip="Manage schedule">
                                     <i data-feather="calendar" style="width: 14px; height: 14px;"></i>
-                                </button>
+                                </a>
                             </div>
                         </td>
                     </tr>
@@ -310,37 +314,48 @@
 }
 </style>
 
+<div id="staffDetailsModal" class="modal" style="display:none; position:fixed; top:0; left:0; width:100vw; height:100vh; background:rgba(0,0,0,0.5); z-index:9999; align-items:center; justify-content:center;">
+  <div style="background:#222; color:#fff; border-radius:8px; padding:32px; min-width:320px; max-width:90vw; position:relative;">
+    <button onclick="closeStaffDetailsModal()" style="position:absolute; top:8px; right:8px; background:none; border:none; color:#fff; font-size:20px;">&times;</button>
+    <h3 id="modalStaffName"></h3>
+    <div id="modalStaffRole"></div>
+    <div id="modalStaffEmail"></div>
+    <div id="modalStaffPhone"></div>
+    <div id="modalStaffStatus"></div>
+  </div>
+</div>
 <script>
 function viewStaffDetails(staffId) {
-    showNotification(`Viewing details for Staff ID: ${staffId}`, 'info');
-    // This would typically open a modal or navigate to a detailed view
+    fetch(`/api/staff/${staffId}/details`).then(r=>r.json()).then(data => {
+        if (data.error) return showNotification(data.error, 'error');
+        document.getElementById('modalStaffName').textContent = data.first_name + ' ' + data.last_name;
+        document.getElementById('modalStaffRole').textContent = 'Role: ' + data.role;
+        document.getElementById('modalStaffEmail').textContent = 'Email: ' + data.email;
+        document.getElementById('modalStaffPhone').textContent = 'Phone: ' + (data.phone || 'N/A');
+        document.getElementById('modalStaffStatus').textContent = 'Status: ' + (data.active ? 'Active' : 'Inactive');
+        document.getElementById('staffDetailsModal').style.display = 'flex';
+    }).catch(()=>showNotification('Failed to load staff details','error'));
 }
-
+function closeStaffDetailsModal() {
+    document.getElementById('staffDetailsModal').style.display = 'none';
+}
 function editStaff(staffId) {
     showNotification(`Editing Staff ID: ${staffId}`, 'info');
     // This would typically open an edit form modal
 }
-
 function manageSchedule(staffId) {
-    showNotification(`Managing schedule for Staff ID: ${staffId}`, 'info');
-    // This would typically open a schedule management interface
+    window.location.href = `/staff/${staffId}/schedule`;
 }
-
 function showAddStaffModal() {
-    showNotification('Add staff functionality would open here', 'info');
-    // This would typically open a modal with a staff creation form
+    window.location.href = "{{ url_for('new_staff') }}";
 }
-
 function showScheduleModal() {
-    showNotification('Schedule management interface would open here', 'info');
-    // This would typically open a comprehensive schedule management modal
+    window.location.href = "{{ url_for('weekly_schedule') }}";
 }
-
 function previousWeek() {
     showNotification('Loading previous week schedule...', 'info');
     // This would update the calendar view
 }
-
 function nextWeek() {
     showNotification('Loading next week schedule...', 'info');
     // This would update the calendar view

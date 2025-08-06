@@ -1,0 +1,128 @@
+{% extends "base.html" %}
+
+{% block title %}Customer Dashboard - Smart Bakery Management{% endblock %}
+
+{% block content %}
+<div class="dashboard">
+    <h1 class="header-title">
+        <i data-feather="user"></i>
+        Welcome, {{ current_user.first_name }}!
+    </h1>
+    
+    <!-- Customer Stats -->
+    <div class="stats-grid">
+        <div class="stat-card">
+            <div class="stat-value">{{ stats.total_orders or 0 }}</div>
+            <div class="stat-label">Total Orders</div>
+        </div>
+        <div class="stat-card">
+            <div class="stat-value">${{ "%.2f"|format(stats.total_spent or 0) }}</div>
+            <div class="stat-label">Total Spent</div>
+        </div>
+        <div class="stat-card">
+            <div class="stat-value">{{ stats.pending_orders or 0 }}</div>
+            <div class="stat-label">Pending Orders</div>
+        </div>
+    </div>
+    
+    <!-- Quick Actions -->
+    <div class="card">
+        <div class="card-header">
+            <h3 class="card-title">Quick Actions</h3>
+        </div>
+        <div class="quick-actions">
+            <a href="{{ url_for('new_order') }}" class="btn btn-primary">
+                <i data-feather="plus"></i>
+                Place New Order
+            </a>
+            <a href="{{ url_for('customer_ai_insights') }}" class="btn btn-success">
+                <i data-feather="zap"></i>
+                AI Recommendations
+            </a>
+            <a href="{{ url_for('orders') }}" class="btn btn-secondary">
+                <i data-feather="list"></i>
+                View All Orders
+            </a>
+        </div>
+    </div>
+    
+    <!-- Recent Orders -->
+    {% if customer_orders %}
+    <div class="card">
+        <div class="card-header">
+            <h3 class="card-title">Your Recent Orders</h3>
+            <a href="{{ url_for('orders') }}" class="btn btn-secondary">View All Orders</a>
+        </div>
+        <div class="table-container">
+            <table class="table">
+                <thead>
+                    <tr>
+                        <th>Order #</th>
+                        <th>Type</th>
+                        <th>Amount</th>
+                        <th>Status</th>
+                        <th>Date</th>
+                        <th>Actions</th>
+                    </tr>
+                </thead>
+                <tbody>
+                    {% for order in customer_orders %}
+                    <tr>
+                        <td>{{ order.order_number }}</td>
+                        <td>
+                            <span class="badge badge-info">{{ order.order_type.value.title() }}</span>
+                        </td>
+                        <td>${{ "%.2f"|format(order.total_amount) }}</td>
+                        <td>
+                            <span class="badge badge-{{ 'success' if order.status.value == 'delivered' else 'warning' if order.status.value == 'pending' else 'info' }}">
+                                {{ order.status.value.replace('_', ' ').title() }}
+                            </span>
+                        </td>
+                        <td class="timestamp" data-datetime="{{ order.created_at.isoformat() }}">
+                            {{ order.created_at.strftime('%m/%d/%Y %H:%M') }}
+                        </td>
+                        <td>
+                            <a href="{{ url_for('download_invoice', order_id=order.id) }}" class="btn btn-sm btn-secondary">
+                                <i data-feather="download"></i>
+                                Invoice
+                            </a>
+                        </td>
+                    </tr>
+                    {% endfor %}
+                </tbody>
+            </table>
+        </div>
+    </div>
+    {% else %}
+    <div class="card">
+        <div class="card-body">
+            <p class="text-center">You haven't placed any orders yet.</p>
+            <div class="text-center">
+                <a href="{{ url_for('new_order') }}" class="btn btn-primary">
+                    <i data-feather="plus"></i>
+                    Place Your First Order
+                </a>
+            </div>
+        </div>
+    </div>
+    {% endif %}
+</div>
+
+<style>
+.quick-actions {
+    display: flex;
+    gap: 15px;
+    padding: 20px;
+    flex-wrap: wrap;
+}
+
+.btn-sm {
+    padding: 6px 12px;
+    font-size: 12px;
+}
+
+.text-center {
+    text-align: center;
+}
+</style>
+{% endblock %} 

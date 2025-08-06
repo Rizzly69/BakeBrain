@@ -2,17 +2,12 @@ import os
 import logging
 
 from flask import Flask
-from flask_sqlalchemy import SQLAlchemy
 from flask_login import LoginManager
-from sqlalchemy.orm import DeclarativeBase
 from werkzeug.middleware.proxy_fix import ProxyFix
 
+# Import db from models to avoid circular imports
+from models import db
 
-class Base(DeclarativeBase):
-    pass
-
-
-db = SQLAlchemy(model_class=Base)
 login_manager = LoginManager()
 
 # create the app
@@ -44,7 +39,7 @@ def load_user(user_id):
 
 with app.app_context():
     # Import models to ensure tables are created
-    import models
+    from models import *
     import routes
     
     db.create_all()
@@ -98,7 +93,7 @@ with app.app_context():
     
     db.session.commit()
     
-    # Create default admin user
+    # Create admin user if it doesn't exist
     admin_user = User.query.filter_by(username='admin').first()
     if not admin_user:
         admin_user = User()
@@ -107,7 +102,9 @@ with app.app_context():
         admin_user.password_hash = generate_password_hash('admin123')
         admin_user.first_name = 'Admin'
         admin_user.last_name = 'User'
-        admin_user.role = admin_role
-        admin_user.is_active = True
+        admin_user.role_id = admin_role.id
         db.session.add(admin_user)
         db.session.commit()
+
+if __name__ == '__main__':
+    app.run(debug=True, host='0.0.0.0', port=5000)

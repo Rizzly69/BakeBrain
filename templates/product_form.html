@@ -1,0 +1,163 @@
+{% extends "base.html" %}
+
+{% block title %}{{ title }} - Smart Bakery Management{% endblock %}
+
+{% block content %}
+<div class="form-container">
+    <div class="card">
+        <div class="card-header">
+            <h2 class="card-title">
+                <i data-feather="plus-circle"></i>
+                {{ title }}
+            </h2>
+        </div>
+        <div class="card-body">
+            <form method="POST" enctype="multipart/form-data">
+                {{ form.hidden_tag() }}
+                
+                <div class="form-group">
+                    {{ form.name.label(class="form-label") }}
+                    {{ form.name(class="form-control", placeholder="Enter product name") }}
+                    {% if form.name.errors %}
+                        <div class="alert alert-error">
+                            {% for error in form.name.errors %}
+                                {{ error }}
+                            {% endfor %}
+                        </div>
+                    {% endif %}
+                </div>
+                
+                <div class="form-group">
+                    {{ form.description.label(class="form-label") }}
+                    {{ form.description(class="form-control", rows="3", placeholder="Enter product description") }}
+                    {% if form.description.errors %}
+                        <div class="alert alert-error">
+                            {% for error in form.description.errors %}
+                                {{ error }}
+                            {% endfor %}
+                        </div>
+                    {% endif %}
+                </div>
+                
+                <div class="form-row">
+                    <div class="form-group">
+                        {{ form.price.label(class="form-label") }}
+                        {{ form.price(class="form-control", placeholder="0.00", step="0.01") }}
+                        {% if form.price.errors %}
+                            <div class="alert alert-error">
+                                {% for error in form.price.errors %}
+                                    {{ error }}
+                                {% endfor %}
+                            </div>
+                        {% endif %}
+                    </div>
+                    
+                    <div class="form-group">
+                        {{ form.cost.label(class="form-label") }}
+                        {{ form.cost(class="form-control", placeholder="0.00", step="0.01") }}
+                        {% if form.cost.errors %}
+                            <div class="alert alert-error">
+                                {% for error in form.cost.errors %}
+                                    {{ error }}
+                                {% endfor %}
+                            </div>
+                        {% endif %}
+                    </div>
+                </div>
+                
+                <div class="form-row">
+                    <div class="form-group">
+                        {{ form.sku.label(class="form-label") }}
+                        {{ form.sku(class="form-control", placeholder="Enter SKU") }}
+                        {% if form.sku.errors %}
+                            <div class="alert alert-error">
+                                {% for error in form.sku.errors %}
+                                    {{ error }}
+                                {% endfor %}
+                            </div>
+                        {% endif %}
+                    </div>
+                    
+                    <div class="form-group">
+                        {{ form.category_id.label(class="form-label") }}
+                        {{ form.category_id(class="form-control") }}
+                        {% if form.category_id.errors %}
+                            <div class="alert alert-error">
+                                {% for error in form.category_id.errors %}
+                                    {{ error }}
+                                {% endfor %}
+                            </div>
+                        {% endif %}
+                    </div>
+                </div>
+                
+                <div class="form-row">
+                    <div class="form-group">
+                        {{ form.requires_preparation.label(class="form-label") }}
+                        <div class="checkbox-group">
+                            {{ form.requires_preparation(class="form-checkbox") }}
+                            <span>Requires preparation time</span>
+                        </div>
+                    </div>
+                    
+                    <div class="form-group">
+                        {{ form.preparation_time.label(class="form-label") }}
+                        {{ form.preparation_time(class="form-control", placeholder="Minutes", min="0") }}
+                        {% if form.preparation_time.errors %}
+                            <div class="alert alert-error">
+                                {% for error in form.preparation_time.errors %}
+                                    {{ error }}
+                                {% endfor %}
+                            </div>
+                        {% endif %}
+                    </div>
+                </div>
+                
+                <div class="form-actions">
+                    <button type="submit" class="btn btn-primary">
+                        <i data-feather="save"></i>
+                        Save Product
+                    </button>
+                    <a href="{{ url_for('products') }}" class="btn btn-secondary">
+                        <i data-feather="x"></i>
+                        Cancel
+                    </a>
+                </div>
+            </form>
+        </div>
+    </div>
+</div>
+
+<style>
+.form-container {
+    max-width: 800px;
+    margin: 0 auto;
+}
+
+.form-row {
+    display: grid;
+    grid-template-columns: 1fr 1fr;
+    gap: 20px;
+}
+
+.checkbox-group {
+    display: flex;
+    align-items: center;
+    gap: 10px;
+}
+
+.form-checkbox {
+    width: 18px;
+    height: 18px;
+    accent-color: var(--neon-cyan);
+}
+
+.form-actions {
+    display: flex;
+    gap: 15px;
+    margin-top: 30px;
+    padding-top: 20px;
+    border-top: 1px solid var(--border-color);
+}
+</style>
+{% endblock %} 

@@ -10,7 +10,7 @@
             Customer Management
         </h1>
         <div class="header-actions">
-            <a href="#" class="btn btn-primary" onclick="showAddCustomerModal()">
+            <a href="{{ url_for('new_customer') }}" class="btn btn-primary">
                 <i data-feather="user-plus"></i>
                 Add Customer
             </a>
@@ -139,21 +139,21 @@
                         </td>
                         <td>
                             <div style="display: flex; gap: 5px;">
-                                <button class="btn btn-secondary" style="font-size: 12px; padding: 4px 8px;"
-                                        onclick="viewCustomerDetails({{ customer.id }})"
-                                        data-tooltip="View details">
+                                <a href="{{ url_for('customer_details', customer_id=customer.id) }}" 
+                                   class="btn btn-secondary" style="font-size: 12px; padding: 4px 8px;"
+                                   data-tooltip="View details">
                                     <i data-feather="eye" style="width: 14px; height: 14px;"></i>
-                                </button>
-                                <button class="btn btn-primary" style="font-size: 12px; padding: 4px 8px;"
-                                        onclick="editCustomer({{ customer.id }})"
-                                        data-tooltip="Edit customer">
+                                </a>
+                                <a href="{{ url_for('edit_customer', customer_id=customer.id) }}" 
+                                   class="btn btn-primary" style="font-size: 12px; padding: 4px 8px;"
+                                   data-tooltip="Edit customer">
                                     <i data-feather="edit" style="width: 14px; height: 14px;"></i>
-                                </button>
-                                <button class="btn btn-success" style="font-size: 12px; padding: 4px 8px;"
-                                        onclick="createOrderForCustomer({{ customer.id }})"
-                                        data-tooltip="Create order">
+                                </a>
+                                <a href="{{ url_for('new_order') }}?customer_id={{ customer.id }}" 
+                                   class="btn btn-success" style="font-size: 12px; padding: 4px 8px;"
+                                   data-tooltip="Create order">
                                     <i data-feather="plus" style="width: 14px; height: 14px;"></i>
-                                </button>
+                                </a>
                             </div>
                         </td>
                     </tr>
@@ -216,24 +216,6 @@
 </style>
 
 <script>
-function viewCustomerDetails(customerId) {
-    showNotification(`Viewing details for Customer ID: ${customerId}`, 'info');
-    // This would typically open a modal or navigate to a detailed view
-}
-
-function editCustomer(customerId) {
-    showNotification(`Editing Customer ID: ${customerId}`, 'info');
-    // This would typically open an edit form modal
-}
-
-function createOrderForCustomer(customerId) {
-    // Navigate to new order page with pre-selected customer
-    window.location.href = `{{ url_for('new_order') }}?customer_id=${customerId}`;
-}
-
-function showAddCustomerModal() {
-    showNotification('Add customer functionality would open here', 'info');
-    // This would typically open a modal with a customer creation form
-}
+// No JavaScript needed - all actions use proper links now
 </script>
 {% endblock %}

@@ -8,7 +8,7 @@ from reportlab.graphics import renderPDF
 from datetime import datetime
 import io
 import os
-from models import Order, OrderItem, User, Product
+from models import Order, OrderItem, User, Product, Configuration
 
 class SmartBillGenerator:
     """Advanced PDF bill generation with professional formatting"""
@@ -53,6 +53,10 @@ class SmartBillGenerator:
             spaceAfter=4
         ))
     
+    def get_config_value(self, key, default=None):
+        """Get configuration value from database"""
+        return Configuration.get_value(key, default)
+    
     def generate_invoice_pdf(self, order_id):
         """Generate a professional invoice PDF"""
         order = Order.query.get(order_id)
@@ -68,14 +72,21 @@ class SmartBillGenerator:
         # Build the invoice content
         story = []
         
-        # Header with company info
-        story.append(Paragraph("Smart Bakery Manager", self.styles['CompanyHeader']))
-        story.append(Paragraph("Premium Artisan Bakery", self.styles['DetailText']))
-        story.append(Paragraph("123 Baker Street, Bakery District", self.styles['DetailText']))
-        story.append(Paragraph("Phone: (555) 123-BAKE | Email: orders@smartbakery.com", self.styles['DetailText']))
+        # Header with company info from configuration
+        company_name = self.get_config_value('company_name', 'Smart Bakery Manager')
+        company_tagline = self.get_config_value('company_tagline', 'Premium Artisan Bakery')
+        company_address = self.get_config_value('company_address', '123 Baker Street, Bakery District')
+        company_phone = self.get_config_value('company_phone', '(555) 123-BAKE')
+        company_email = self.get_config_value('company_email', 'orders@smartbakery.com')
+        
+        story.append(Paragraph(company_name, self.styles['CompanyHeader']))
+        story.append(Paragraph(company_tagline, self.styles['DetailText']))
+        story.append(Paragraph(company_address, self.styles['DetailText']))
+        story.append(Paragraph(f"Phone: {company_phone} | Email: {company_email}", self.styles['DetailText']))
         story.append(Spacer(1, 20))
         
-        # Invoice header
+        # Invoice header with configurable prefix
+        invoice_prefix = self.get_config_value('invoice_prefix', 'INV')
         story.append(Paragraph(f"INVOICE #{order.order_number}", self.styles['InvoiceTitle']))
         
         # Invoice details table
@@ -107,6 +118,9 @@ class SmartBillGenerator:
         # Items table
         story.append(Paragraph("Order Items", self.styles['SectionHeader']))
         
+        # Get currency symbol from configuration
+        currency_symbol = self.get_config_value('currency_symbol', '$')
+        
         # Prepare items data
         items_data = [['Description', 'Qty', 'Unit Price', 'Total']]
         
@@ -114,8 +128,8 @@ class SmartBillGenerator:
             items_data.append([
                 item.product.name,
                 str(item.quantity),
-                f"${item.unit_price:.2f}",
-                f"${item.total_price:.2f}"
+                f"{currency_symbol}{item.unit_price:.2f}",
+                f"{currency_symbol}{item.total_price:.2f}"
             ])
         
         # Add special instructions if any
@@ -164,16 +178,16 @@ class SmartBillGenerator:
         
         # Summary table
         summary_data = [
-            ['Subtotal:', f"${subtotal:.2f}"],
+            ['Subtotal:', f"{currency_symbol}{subtotal:.2f}"],
         ]
         
         if order.discount_amount > 0:
-            summary_data.append(['Discount:', f"-${order.discount_amount:.2f}"])
+            summary_data.append(['Discount:', f"-{currency_symbol}{order.discount_amount:.2f}"])
         
         summary_data.extend([
-            ['Tax:', f"${order.tax_amount:.2f}"],
+            ['Tax:', f"{currency_symbol}{order.tax_amount:.2f}"],
             ['', ''],  # Spacer row
-            ['TOTAL:', f"${order.total_amount:.2f}"]
+            ['TOTAL:', f"{currency_symbol}{order.total_amount:.2f}"]
         ])
         
         summary_table = Table(summary_data, colWidths=[4*inch, 1.2*inch])
@@ -204,10 +218,13 @@ class SmartBillGenerator:
                 story.append(Paragraph(f"Setup Requirements: {order.setup_requirements}", self.styles['DetailText']))
             story.append(Spacer(1, 20))
         
-        # Footer
+        # Footer with configurable text
+        invoice_footer = self.get_config_value('invoice_footer', 'Thank you for choosing Smart Bakery Manager!')
+        support_email = self.get_config_value('company_email', 'support@smartbakery.com')
+        
         story.append(Spacer(1, 20))
-        story.append(Paragraph("Thank you for choosing Smart Bakery Manager!", self.styles['DetailText']))
-        story.append(Paragraph("Questions? Contact us at support@smartbakery.com", self.styles['DetailText']))
+        story.append(Paragraph(invoice_footer, self.styles['DetailText']))
+        story.append(Paragraph(f"Questions? Contact us at {support_email}", self.styles['DetailText']))
         
         # Build PDF
         doc.build(story)
@@ -223,15 +240,20 @@ class SmartBillGenerator:
         
         story = []
         
-        # Header
-        story.append(Paragraph("Smart Bakery Manager", self.styles['CompanyHeader']))
+        # Header with company info from configuration
+        company_name = self.get_config_value('company_name', 'Smart Bakery Manager')
+        story.append(Paragraph(company_name, self.styles['CompanyHeader']))
         story.append(Paragraph(f"Daily Sales Report - {date.strftime('%B %d, %Y')}", self.styles['InvoiceTitle']))
         story.append(Spacer(1, 20))
         
         # Get orders for the day
+        from datetime import datetime, time
+        start_of_day = datetime.combine(date, time.min)
+        end_of_day = datetime.combine(date, time.max)
+        
         orders = Order.query.filter(
-            Order.created_at >= date,
-            Order.created_at < date.replace(hour=23, minute=59, second=59)
+            Order.created_at >= start_of_day,
+            Order.created_at <= end_of_day
         ).all()
         
         if not orders:
@@ -242,10 +264,12 @@ class SmartBillGenerator:
             total_orders = len(orders)
             avg_order_value = total_revenue / total_orders if total_orders > 0 else 0
             
+            currency_symbol = self.get_config_value('currency_symbol', '$')
+            
             summary_data = [
                 ['Total Orders:', str(total_orders)],
-                ['Total Revenue:', f"${total_revenue:.2f}"],
-                ['Average Order Value:', f"${avg_order_value:.2f}"],
+                ['Total Revenue:', f"{currency_symbol}{total_revenue:.2f}"],
+                ['Average Order Value:', f"{currency_symbol}{avg_order_value:.2f}"],
             ]
             
             summary_table = Table(summary_data, colWidths=[2*inch, 2*inch])
@@ -271,7 +295,7 @@ class SmartBillGenerator:
                     order.order_number,
                     f"{order.customer.first_name} {order.customer.last_name}",
                     order.order_type.value.title(),
-                    f"${order.total_amount:.2f}",
+                    f"{currency_symbol}{order.total_amount:.2f}",
                     order.status.value.replace('_', ' ').title()
                 ])
             
@@ -306,8 +330,9 @@ class SmartBillGenerator:
         
         story = []
         
-        # Header
-        story.append(Paragraph("Smart Bakery Manager", self.styles['CompanyHeader']))
+        # Header with company info from configuration
+        company_name = self.get_config_value('company_name', 'Smart Bakery Manager')
+        story.append(Paragraph(company_name, self.styles['CompanyHeader']))
         story.append(Paragraph(f"Inventory Report - {datetime.now().strftime('%B %d, %Y')}", self.styles['InvoiceTitle']))
         story.append(Spacer(1, 20))
         
@@ -322,11 +347,13 @@ class SmartBillGenerator:
             low_stock_items = len([item for item in inventory_items if item.is_low_stock()])
             total_value = sum(item.quantity * float(item.product.cost or 0) for item in inventory_items)
             
+            currency_symbol = self.get_config_value('currency_symbol', '$')
+            
             # Summary
             summary_data = [
                 ['Total Products:', str(total_items)],
                 ['Low Stock Items:', str(low_stock_items)],
-                ['Total Inventory Value:', f"${total_value:.2f}"],
+                ['Total Inventory Value:', f"{currency_symbol}{total_value:.2f}"],
             ]
             
             summary_table = Table(summary_data, colWidths=[2*inch, 2*inch])
@@ -355,7 +382,7 @@ class SmartBillGenerator:
                     str(item.min_stock_level),
                     str(item.max_stock_level),
                     status,
-                    f"${value:.2f}"
+                    f"{currency_symbol}{value:.2f}"
                 ])
             
             inventory_table = Table(inventory_data, colWidths=[2*inch, 0.8*inch, 0.8*inch, 0.8*inch, 0.8*inch, 0.8*inch])

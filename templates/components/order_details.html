@@ -1,0 +1,166 @@
+<div class="order-details">
+    <div class="row">
+        <div class="col-md-8">
+            <h5>Order Information</h5>
+            <table class="table table-sm">
+                <tr>
+                    <td><strong>Order Number:</strong></td>
+                    <td>{{ order.order_number }}</td>
+                </tr>
+                <tr>
+                    <td><strong>Customer:</strong></td>
+                    <td>{{ order.customer.first_name }} {{ order.customer.last_name }}</td>
+                </tr>
+                <tr>
+                    <td><strong>Order Type:</strong></td>
+                    <td><span class="badge bg-info">{{ order.order_type.value.title() }}</span></td>
+                </tr>
+                <tr>
+                    <td><strong>Status:</strong></td>
+                    <td>
+                        <span class="badge bg-{{ 'success' if order.status.value == 'delivered' else 'danger' if order.status.value == 'cancelled' else 'warning' if order.status.value == 'pending' else 'info' }}">
+                            {{ order.status.value.replace('_', ' ').title() }}
+                        </span>
+                    </td>
+                </tr>
+                <tr>
+                    <td><strong>Created:</strong></td>
+                    <td>{{ order.created_at.strftime('%B %d, %Y at %I:%M %p') }}</td>
+                </tr>
+                {% if order.delivery_date %}
+                <tr>
+                    <td><strong>Delivery Date:</strong></td>
+                    <td>{{ order.delivery_date.strftime('%B %d, %Y at %I:%M %p') }}</td>
+                </tr>
+                {% endif %}
+                {% if order.delivery_address %}
+                <tr>
+                    <td><strong>Delivery Address:</strong></td>
+                    <td>{{ order.delivery_address }}</td>
+                </tr>
+                {% endif %}
+                {% if order.special_instructions %}
+                <tr>
+                    <td><strong>Special Instructions:</strong></td>
+                    <td>{{ order.special_instructions }}</td>
+                </tr>
+                {% endif %}
+                {% if order.order_type.value == 'catering' %}
+                <tr>
+                    <td><strong>Event Date:</strong></td>
+                    <td>{{ order.event_date.strftime('%B %d, %Y at %I:%M %p') if order.event_date else 'Not specified' }}</td>
+                </tr>
+                <tr>
+                    <td><strong>Guest Count:</strong></td>
+                    <td>{{ order.guest_count if order.guest_count else 'Not specified' }}</td>
+                </tr>
+                {% if order.setup_requirements %}
+                <tr>
+                    <td><strong>Setup Requirements:</strong></td>
+                    <td>{{ order.setup_requirements }}</td>
+                </tr>
+                {% endif %}
+                {% endif %}
+            </table>
+        </div>
+        
+        <div class="col-md-4">
+            <h5>Order Summary</h5>
+            <div class="card">
+                <div class="card-body">
+                    <div class="d-flex justify-content-between mb-2">
+                        <span>Subtotal:</span>
+                        <span>${{ "%.2f"|format(order.total_amount - order.tax_amount + order.discount_amount) }}</span>
+                    </div>
+                    {% if order.discount_amount > 0 %}
+                    <div class="d-flex justify-content-between mb-2 text-success">
+                        <span>Discount:</span>
+                        <span>-${{ "%.2f"|format(order.discount_amount) }}</span>
+                    </div>
+                    {% endif %}
+                    <div class="d-flex justify-content-between mb-2">
+                        <span>Tax:</span>
+                        <span>${{ "%.2f"|format(order.tax_amount) }}</span>
+                    </div>
+                    <hr>
+                    <div class="d-flex justify-content-between fw-bold">
+                        <span>Total:</span>
+                        <span>${{ "%.2f"|format(order.total_amount) }}</span>
+                    </div>
+                </div>
+            </div>
+        </div>
+    </div>
+    
+    {% if order.items %}
+    <div class="row mt-4">
+        <div class="col-12">
+            <h5>Order Items</h5>
+            <div class="table-responsive">
+                <table class="table table-sm">
+                    <thead>
+                        <tr>
+                            <th>Product</th>
+                            <th>Quantity</th>
+                            <th>Unit Price</th>
+                            <th>Total</th>
+                            {% if order.items|selectattr('special_instructions')|list %}
+                            <th>Special Instructions</th>
+                            {% endif %}
+                        </tr>
+                    </thead>
+                    <tbody>
+                        {% for item in order.items %}
+                        <tr>
+                            <td>{{ item.product.name }}</td>
+                            <td>{{ item.quantity }}</td>
+                            <td>${{ "%.2f"|format(item.unit_price) }}</td>
+                            <td>${{ "%.2f"|format(item.total_price) }}</td>
+                            {% if order.items|selectattr('special_instructions')|list %}
+                            <td>
+                                {% if item.special_instructions %}
+                                <small class="text-muted">{{ item.special_instructions }}</small>
+                                {% endif %}
+                            </td>
+                            {% endif %}
+                        </tr>
+                        {% endfor %}
+                    </tbody>
+                </table>
+            </div>
+        </div>
+    </div>
+    {% else %}
+    <div class="row mt-4">
+        <div class="col-12">
+            <div class="alert alert-info">
+                <i class="fas fa-info-circle"></i>
+                No items have been added to this order yet.
+                {% if current_user.role.name in ['admin', 'manager', 'staff'] %}
+                <a href="{{ url_for('add_order_item', order_id=order.id) }}" class="btn btn-sm btn-primary ms-2">
+                    Add Items
+                </a>
+                {% endif %}
+            </div>
+        </div>
+    </div>
+    {% endif %}
+    
+    <div class="row mt-4">
+        <div class="col-12">
+            <div class="d-flex gap-2">
+                <a href="{{ url_for('download_invoice', order_id=order.id) }}" class="btn btn-success">
+                    <i class="fas fa-download"></i> Download Invoice
+                </a>
+                {% if current_user.role.name in ['admin', 'manager', 'staff'] %}
+                <a href="{{ url_for('add_order_item', order_id=order.id) }}" class="btn btn-primary">
+                    <i class="fas fa-plus"></i> Add Items
+                </a>
+                {% endif %}
+                <button type="button" class="btn btn-secondary" data-bs-dismiss="modal">
+                    Close
+                </button>
+            </div>
+        </div>
+    </div>
+</div> 

@@ -46,10 +46,18 @@
             <div style="display: flex; align-items: center; gap: 15px;">
                 <!-- Notifications -->
                 <div class="notification-bell" style="position: relative;">
-                    <button class="btn-icon" onclick="toggleNotifications()" data-tooltip="Notifications">
+                    <button class="btn-icon" id="notification-bell-btn" data-tooltip="Notifications" type="button">
                         <i data-feather="bell" style="width: 20px; height: 20px;"></i>
-                        <span class="notification-badge" style="position: absolute; top: -5px; right: -5px; background: var(--error); color: white; border-radius: 50%; width: 18px; height: 18px; font-size: 10px; display: flex; align-items: center; justify-content: center;">3</span>
+                        <span class="notification-badge" id="notification-badge" style="position: absolute; top: -5px; right: -5px; background: var(--error); color: white; border-radius: 50%; width: 18px; height: 18px; font-size: 10px; display: none; align-items: center; justify-content: center;">0</span>
                     </button>
+                    <div class="dropdown-menu" id="notification-pane" style="display: none; position: absolute; top: 110%; right: 0; background: var(--bg-card); border: 1px solid var(--bg-tertiary); border-radius: 8px; padding: 10px; box-shadow: var(--shadow-dark); z-index: 1000; min-width: 300px; max-width: 350px; max-height: 400px; overflow-y: auto;">
+                        <div id="notification-list">
+                            <div style="text-align:center; color:var(--text-secondary); font-size:14px;">Loading...</div>
+                        </div>
+                        <div style="text-align:right; margin-top:8px;">
+                            <button class="btn-icon" id="mark-all-read-btn" style="font-size:12px;">Mark all as read</button>
+                        </div>
+                    </div>
                 </div>
                 
                 <!-- Quick Actions -->
@@ -155,11 +163,70 @@
 }
 </style>
 
+
 <script>
-function toggleNotifications() {
-    // This would typically show a notifications dropdown
-    showNotification('No new notifications', 'info');
+// Notification dropdown logic
+const notificationBellBtn = document.getElementById('notification-bell-btn');
+const notificationPane = document.getElementById('notification-pane');
+const notificationBadge = document.getElementById('notification-badge');
+const notificationList = document.getElementById('notification-list');
+const markAllReadBtn = document.getElementById('mark-all-read-btn');
+
+function fetchNotifications() {
+    fetch('/api/notifications')
+        .then(res => res.json())
+        .then(data => {
+            // Update badge
+            if (data.unread_count > 0) {
+                notificationBadge.textContent = data.unread_count;
+                notificationBadge.style.display = 'flex';
+            } else {
+                notificationBadge.style.display = 'none';
+            }
+            // Render notifications
+            if (data.notifications.length === 0) {
+                notificationList.innerHTML = '<div style="text-align:center; color:var(--text-secondary); font-size:14px;">No new notifications</div>';
+            } else {
+                notificationList.innerHTML = data.notifications.map(n => `
+                    <div style="padding:8px 0; border-bottom:1px solid var(--bg-tertiary); color:${n.is_read ? 'var(--text-secondary)' : 'var(--text-primary)'}; background:${n.is_read ? 'transparent' : 'var(--bg-tertiary)'};">
+                        <div style="font-size:14px;">${n.message}</div>
+                        <div style="font-size:11px; color:var(--neon-cyan);">${n.created_at}</div>
+                    </div>
+                `).join('');
+            }
+        });
 }
+
+function toggleNotifications() {
+    if (notificationPane.style.display === 'none') {
+        notificationPane.style.display = 'block';
+        fetchNotifications();
+    } else {
+        notificationPane.style.display = 'none';
+    }
+}
+
+if (notificationBellBtn) {
+    notificationBellBtn.addEventListener('click', function(e) {
+        e.stopPropagation();
+        toggleNotifications();
+    });
+}
+if (markAllReadBtn) {
+    markAllReadBtn.addEventListener('click', function(e) {
+        fetch('/api/notifications/mark_read', {method: 'POST'})
+            .then(() => {
+                fetchNotifications();
+            });
+    });
+}
+
+// Close notification pane when clicking outside
+document.addEventListener('click', function(e) {
+    if (!e.target.closest('.notification-bell')) {
+        notificationPane.style.display = 'none';
+    }
+});
 
 function toggleUserDropdown() {
     const dropdown = document.getElementById('user-dropdown');

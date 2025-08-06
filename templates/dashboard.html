@@ -34,6 +34,10 @@
                 <div class="stat-value">{{ stats.low_stock_items or 0 }}</div>
                 <div class="stat-label">Low Stock Items</div>
             </div>
+            <div class="stat-card">
+                <div class="stat-value">${{ "%.2f"|format(stats.total_revenue or 0) }}</div>
+                <div class="stat-label">Total Revenue</div>
+            </div>
         </div>
         
         <div style="display: grid; grid-template-columns: 1fr 1fr; gap: 20px; margin-bottom: 20px;">
@@ -41,6 +45,14 @@
             <div class="card">
                 <div class="card-header">
                     <h3 class="card-title">Revenue Trend</h3>
+                    <div class="chart-controls">
+                        <select id="revenuePeriod" class="form-select form-select-sm" onchange="updateRevenueChart()">
+                            <option value="7d">Last 7 Days</option>
+                            <option value="30d">Last 30 Days</option>
+                            <option value="90d">Last 90 Days</option>
+                            <option value="1y">Last Year</option>
+                        </select>
+                    </div>
                 </div>
                 <div class="chart-container">
                     <canvas id="revenueTrendChart"></canvas>
@@ -51,6 +63,14 @@
             <div class="card">
                 <div class="card-header">
                     <h3 class="card-title">Order Status Distribution</h3>
+                    <div class="chart-controls">
+                        <select id="ordersPeriod" class="form-select form-select-sm" onchange="updateOrdersChart()">
+                            <option value="7d">Last 7 Days</option>
+                            <option value="30d">Last 30 Days</option>
+                            <option value="90d">Last 90 Days</option>
+                            <option value="1y">Last Year</option>
+                        </select>
+                    </div>
                 </div>
                 <div class="chart-container">
                     <canvas id="ordersChart"></canvas>
@@ -250,4 +270,151 @@
         {% endif %}
     {% endif %}
 </div>
+
+{% if current_user.role.name in ['admin', 'manager'] %}
+<script>
+    // Pass chart data from Flask to JavaScript
+    window.chartData = {
+        orderStatusData: {{ order_status_data|tojson }},
+        revenueData: {{ revenue_data|tojson }},
+        revenueLabels: {{ revenue_labels|tojson }}
+    };
+    
+    // Global chart instances
+    let revenueChart = null;
+    let ordersChart = null;
+    
+    // Function to update revenue chart
+    function updateRevenueChart() {
+        const period = document.getElementById('revenuePeriod').value;
+        console.log('Updating revenue chart with period:', period);
+        
+        fetch(`/api/chart-data?period=${period}`)
+            .then(response => response.json())
+            .then(data => {
+                console.log('Revenue chart data received:', data);
+                if (revenueChart) {
+                    revenueChart.destroy();
+                }
+                
+                const ctx = document.getElementById('revenueTrendChart').getContext('2d');
+                revenueChart = new Chart(ctx, {
+                    type: 'line',
+                    data: {
+                        labels: data.revenue_labels,
+                        datasets: [{
+                            label: 'Revenue',
+                            data: data.revenue_data,
+                            backgroundColor: 'rgba(0, 255, 255, 0.1)',
+                            borderColor: '#00ffff',
+                            borderWidth: 2,
+                            fill: false
+                        }]
+                    },
+                    options: {
+                        responsive: true,
+                        maintainAspectRatio: false,
+                        plugins: {
+                            legend: {
+                                labels: {
+                                    color: '#b0b0b0'
+                                }
+                            }
+                        },
+                        scales: {
+                            y: {
+                                beginAtZero: true,
+                                grid: {
+                                    color: 'rgba(255, 255, 255, 0.1)'
+                                },
+                                ticks: {
+                                    color: '#b0b0b0',
+                                    callback: function(value) {
+                                        return '$' + value.toLocaleString();
+                                    }
+                                }
+                            },
+                            x: {
+                                grid: {
+                                    color: 'rgba(255, 255, 255, 0.1)'
+                                },
+                                ticks: {
+                                    color: '#b0b0b0'
+                                }
+                            }
+                        }
+                    }
+                });
+            })
+            .catch(error => {
+                console.error('Error updating revenue chart:', error);
+            });
+    }
+    
+    // Function to update orders chart
+    function updateOrdersChart() {
+        const period = document.getElementById('ordersPeriod').value;
+        console.log('Updating orders chart with period:', period);
+        
+        fetch(`/api/chart-data?period=${period}`)
+            .then(response => response.json())
+            .then(data => {
+                console.log('Orders chart data received:', data);
+                if (ordersChart) {
+                    ordersChart.destroy();
+                }
+                
+                const ctx = document.getElementById('ordersChart').getContext('2d');
+                ordersChart = new Chart(ctx, {
+                    type: 'doughnut',
+                    data: {
+                        labels: ['Pending', 'Confirmed', 'In Progress', 'Ready', 'Delivered'],
+                        datasets: [{
+                            data: [
+                                data.order_status_data.pending || 0,
+                                data.order_status_data.confirmed || 0,
+                                data.order_status_data.in_preparation || 0,
+                                data.order_status_data.ready || 0,
+                                data.order_status_data.delivered || 0
+                            ],
+                            backgroundColor: [
+                                '#ffaa00',
+                                '#00aaff',
+                                '#8a2be2',
+                                '#00ff88',
+                                '#00ffff'
+                            ],
+                            borderWidth: 2,
+                            borderColor: '#1a1a1a'
+                        }]
+                    },
+                    options: {
+                        responsive: true,
+                        maintainAspectRatio: false,
+                        plugins: {
+                            legend: {
+                                position: 'bottom',
+                                labels: {
+                                    color: '#b0b0b0',
+                                    padding: 20
+                                }
+                            }
+                        }
+                    }
+                });
+            })
+            .catch(error => {
+                console.error('Error updating orders chart:', error);
+            });
+    }
+    
+    // Initialize charts when page loads
+    document.addEventListener('DOMContentLoaded', function() {
+        console.log('Dashboard loaded, initializing charts...');
+        // Initialize with default 7-day period
+        updateRevenueChart();
+        updateOrdersChart();
+    });
+</script>
+{% endif %}
 {% endblock %}

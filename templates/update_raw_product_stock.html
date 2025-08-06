@@ -1,0 +1,194 @@
+{% extends "base.html" %}
+
+{% block title %}Update Stock - {{ raw_product.name }}{% endblock %}
+
+{% block content %}
+<div class="form-container">
+    <div class="card">
+        <div class="card-header">
+            <h2 class="card-title">
+                <i data-feather="edit-3"></i>
+                Update Stock Level
+            </h2>
+        </div>
+        <div class="card-body">
+            <div class="product-info">
+                <h3>{{ raw_product.name }}</h3>
+                {% if raw_product.description %}
+                <p class="product-description">{{ raw_product.description }}</p>
+                {% endif %}
+                
+                <div class="stock-details">
+                    <div class="detail-item">
+                        <span class="label">Current Stock:</span>
+                        <span class="value {{ 'low-stock' if raw_product.is_low_stock() else 'in-stock' }}">
+                            {{ "%.3f"|format(raw_product.current_stock) }} {{ raw_product.unit_of_measure }}
+                        </span>
+                    </div>
+                    <div class="detail-item">
+                        <span class="label">Minimum Level:</span>
+                        <span class="value">{{ "%.3f"|format(raw_product.min_stock_level) }} {{ raw_product.unit_of_measure }}</span>
+                    </div>
+                    <div class="detail-item">
+                        <span class="label">Reorder Point:</span>
+                        <span class="value">{{ "%.3f"|format(raw_product.reorder_point) }} {{ raw_product.unit_of_measure }}</span>
+                    </div>
+                    <div class="detail-item">
+                        <span class="label">Cost per Unit:</span>
+                        <span class="value">${{ "%.2f"|format(raw_product.cost_per_unit) }}</span>
+                    </div>
+                    {% if raw_product.supplier %}
+                    <div class="detail-item">
+                        <span class="label">Supplier:</span>
+                        <span class="value">{{ raw_product.supplier }}</span>
+                    </div>
+                    {% endif %}
+                    <div class="detail-item">
+                        <span class="label">Location:</span>
+                        <span class="value">{{ raw_product.location }}</span>
+                    </div>
+                </div>
+            </div>
+            
+            <form method="POST" class="stock-form">
+                <div class="form-group">
+                    <label for="current_stock" class="form-label">New Stock Level ({{ raw_product.unit_of_measure }})</label>
+                    <input type="number" 
+                           id="current_stock" 
+                           name="current_stock" 
+                           class="form-control" 
+                           value="{{ "%.3f"|format(raw_product.current_stock) }}"
+                           step="0.001" 
+                           min="0" 
+                           required>
+                    <small class="form-help">Enter the new current stock level</small>
+                </div>
+                
+                <div class="form-actions">
+                    <button type="submit" class="btn btn-primary">
+                        <i data-feather="save"></i>
+                        Update Stock
+                    </button>
+                    <a href="{{ url_for('raw_products') }}" class="btn btn-secondary">Cancel</a>
+                </div>
+            </form>
+        </div>
+    </div>
+</div>
+
+<style>
+.form-container {
+    max-width: 600px;
+    margin: 0 auto;
+    padding: 20px;
+}
+
+.product-info {
+    background: var(--bg-tertiary);
+    padding: 20px;
+    border-radius: 8px;
+    margin-bottom: 30px;
+}
+
+.product-info h3 {
+    margin: 0 0 10px 0;
+    color: var(--text-primary);
+    font-size: 20px;
+}
+
+.product-description {
+    color: var(--text-muted);
+    margin-bottom: 20px;
+    font-size: 14px;
+}
+
+.stock-details {
+    display: grid;
+    grid-template-columns: 1fr 1fr;
+    gap: 15px;
+}
+
+.detail-item {
+    display: flex;
+    flex-direction: column;
+    gap: 5px;
+}
+
+.label {
+    font-size: 12px;
+    color: var(--text-muted);
+    font-weight: 500;
+}
+
+.value {
+    font-size: 14px;
+    font-weight: 600;
+    color: var(--text-primary);
+}
+
+.value.low-stock {
+    color: var(--warning);
+}
+
+.value.in-stock {
+    color: var(--success);
+}
+
+.stock-form {
+    margin-top: 20px;
+}
+
+.form-group {
+    margin-bottom: 20px;
+}
+
+.form-label {
+    display: block;
+    margin-bottom: 8px;
+    font-weight: 600;
+    color: var(--text-primary);
+}
+
+.form-control {
+    width: 100%;
+    padding: 12px;
+    border: 1px solid var(--border-color);
+    border-radius: 8px;
+    background: var(--bg-card);
+    color: var(--text-primary);
+    font-size: 14px;
+    transition: border-color 0.2s, box-shadow 0.2s;
+}
+
+.form-control:focus {
+    outline: none;
+    border-color: var(--accent-blue);
+    box-shadow: 0 0 0 3px rgba(59, 130, 246, 0.1);
+}
+
+.form-help {
+    display: block;
+    margin-top: 5px;
+    font-size: 12px;
+    color: var(--text-muted);
+}
+
+.form-actions {
+    display: flex;
+    gap: 15px;
+    margin-top: 30px;
+    padding-top: 20px;
+    border-top: 1px solid var(--border-color);
+}
+
+@media (max-width: 768px) {
+    .stock-details {
+        grid-template-columns: 1fr;
+    }
+    
+    .form-actions {
+        flex-direction: column;
+    }
+}
+</style>
+{% endblock %} 

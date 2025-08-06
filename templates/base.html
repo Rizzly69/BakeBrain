@@ -14,6 +14,10 @@
     <!-- Feather Icons -->
     <script src="https://unpkg.com/feather-icons"></script>
     
+    <!-- Flatpickr Date Picker -->
+    <link rel="stylesheet" href="https://cdn.jsdelivr.net/npm/flatpickr/dist/flatpickr.min.css">
+    <script src="https://cdn.jsdelivr.net/npm/flatpickr"></script>
+    
     {% block head %}{% endblock %}
 </head>
 <body>
@@ -55,6 +59,29 @@
     <script>
         // Initialize Feather icons
         feather.replace();
+        
+        // Initialize date pickers
+        document.addEventListener('DOMContentLoaded', function() {
+            // Initialize all datetime-local inputs as date pickers
+            const dateInputs = document.querySelectorAll('input[type="datetime-local"]');
+            dateInputs.forEach(input => {
+                flatpickr(input, {
+                    enableTime: true,
+                    dateFormat: "Y-m-d H:i",
+                    time_24hr: true,
+                    theme: "dark"
+                });
+            });
+            
+            // Initialize date inputs as date pickers
+            const dateOnlyInputs = document.querySelectorAll('input[type="date"]');
+            dateOnlyInputs.forEach(input => {
+                flatpickr(input, {
+                    dateFormat: "Y-m-d",
+                    theme: "dark"
+                });
+            });
+        });
     </script>
     
     {% block scripts %}{% endblock %}

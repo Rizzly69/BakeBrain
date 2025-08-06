@@ -48,19 +48,21 @@ def setup_database():
         baker_role = Role.query.filter_by(name='baker').first()
         
         users_data = [
-            ('admin', 'admin@bakery.com', 'admin123', admin_role.id),
-            ('manager1', 'manager1@bakery.com', 'manager123', manager_role.id),
-            ('staff1', 'staff1@bakery.com', 'staff123', staff_role.id),
-            ('customer1', 'customer1@bakery.com', 'customer123', customer_role.id),
-            ('baker1', 'baker1@bakery.com', 'baker123', baker_role.id)
+            ('admin', 'admin@bakery.com', 'admin123', 'Admin', 'User', admin_role.id),
+            ('manager1', 'manager1@bakery.com', 'manager123', 'Manager', 'One', manager_role.id),
+            ('staff1', 'staff1@bakery.com', 'staff123', 'Staff', 'One', staff_role.id),
+            ('customer1', 'customer1@bakery.com', 'customer123', 'Customer', 'One', customer_role.id),
+            ('baker1', 'baker1@bakery.com', 'baker123', 'Baker', 'One', baker_role.id)
         ]
         
-        for username, email, password, role_id in users_data:
+        for username, email, password, first_name, last_name, role_id in users_data:
             if not User.query.filter_by(username=username).first():
                 user = User(
                     username=username,
                     email=email,
                     password_hash=generate_password_hash(password),
+                    first_name=first_name,
+                    last_name=last_name,
                     role_id=role_id
                 )
                 db.session.add(user)
@@ -132,6 +134,92 @@ def setup_database():
         
         db.session.commit()
         
+        # Create sample orders
+        print("Creating sample orders...")
+        customer1 = User.query.filter_by(username='customer1').first()
+        products = Product.query.all()
+        
+        if customer1 and products:
+            # Create some sample orders with different statuses
+            order_statuses = [OrderStatus.PENDING, OrderStatus.CONFIRMED, OrderStatus.IN_PREPARATION, OrderStatus.READY, OrderStatus.DELIVERED]
+            
+            for i in range(15):  # Create 15 sample orders
+                order = Order(
+                    order_number=f"ORD-{datetime.now().strftime('%Y%m%d')}-{i+1:03d}",
+                    customer_id=customer1.id,
+                    order_type=OrderType.REGULAR,
+                    status=order_statuses[i % len(order_statuses)],
+                    total_amount=float(products[i % len(products)].price) * (i % 3 + 1),
+                    created_at=datetime.now() - timedelta(days=i)
+                )
+                db.session.add(order)
+                db.session.flush()  # Flush to get the order ID
+                
+                # Add order items
+                product = products[i % len(products)]
+                order_item = OrderItem(
+                    order_id=order.id,
+                    product_id=product.id,
+                    quantity=i % 3 + 1,
+                    unit_price=float(product.price),
+                    total_price=float(product.price) * (i % 3 + 1)
+                )
+                db.session.add(order_item)
+        
+        db.session.commit()
+        
+        # Create raw products
+        print("Creating raw products...")
+        raw_products_data = [
+            ('All-Purpose Flour', 'High-quality all-purpose flour for baking', 'kg', 2.50, 'Local Flour Mill', '555-0101', 'Storage A', 50.0, 10.0, 5.0),
+            ('Sugar', 'Granulated white sugar', 'kg', 1.80, 'Sweet Suppliers Inc', '555-0102', 'Storage A', 30.0, 8.0, 3.0),
+            ('Butter', 'Unsalted butter for baking', 'kg', 8.00, 'Dairy Delights', '555-0103', 'Refrigerator', 15.0, 5.0, 2.0),
+            ('Eggs', 'Fresh farm eggs', 'pieces', 0.30, 'Fresh Farm Eggs', '555-0104', 'Refrigerator', 200.0, 50.0, 20.0),
+            ('Milk', 'Whole milk for recipes', 'l', 2.20, 'Dairy Delights', '555-0103', 'Refrigerator', 20.0, 5.0, 2.0),
+            ('Vanilla Extract', 'Pure vanilla extract', 'ml', 0.05, 'Flavor Masters', '555-0105', 'Storage B', 1000.0, 200.0, 100.0),
+            ('Chocolate Chips', 'Semi-sweet chocolate chips', 'kg', 12.00, 'Chocolate World', '555-0106', 'Storage B', 8.0, 3.0, 1.0),
+            ('Yeast', 'Active dry yeast', 'g', 0.02, 'Baking Essentials', '555-0107', 'Storage A', 500.0, 100.0, 50.0),
+            ('Salt', 'Fine sea salt', 'kg', 1.50, 'Salt Suppliers', '555-0108', 'Storage A', 25.0, 5.0, 2.0),
+            ('Olive Oil', 'Extra virgin olive oil', 'l', 15.00, 'Oil Importers', '555-0109', 'Storage B', 10.0, 3.0, 1.0)
+        ]
+        
+        for name, description, unit, cost, supplier, contact, location, stock, min_level, reorder in raw_products_data:
+            if not RawProduct.query.filter_by(name=name).first():
+                raw_product = RawProduct(
+                    name=name,
+                    description=description,
+                    unit_of_measure=unit,
+                    cost_per_unit=cost,
+                    supplier=supplier,
+                    supplier_contact=contact,
+                    location=location,
+                    current_stock=stock,
+                    min_stock_level=min_level,
+                    reorder_point=reorder
+                )
+                db.session.add(raw_product)
+        
+        db.session.commit()
+        
+        # Create AI insights
+        print("Creating AI insights...")
+        insights_data = [
+            ('Demand Forecast', 'Based on historical data, expect 20% increase in cake orders for the upcoming weekend.', 0.85),
+            ('Inventory Alert', 'Croissant inventory is running low. Consider restocking within 2 days.', 0.92),
+            ('Revenue Trend', 'Weekend sales show 15% higher revenue compared to weekdays.', 0.78)
+        ]
+        
+        for title, description, confidence in insights_data:
+            insight = AIInsight(
+                insight_type='demand_forecast',
+                title=title,
+                description=description,
+                confidence_score=confidence
+            )
+            db.session.add(insight)
+        
+        db.session.commit()
+        
         print("Database setup completed successfully!")
         print("\nTest accounts created:")
         print("- Admin: admin / admin123")
@@ -139,7 +227,90 @@ def setup_database():
         print("- Staff: staff1 / staff123")
         print("- Customer: customer1 / customer123")
         print("- Baker: baker1 / baker123")
+        print("\nSample data created:")
+        print("- 15 sample orders with various statuses")
+        print("- AI insights for business intelligence")
         print("\nYou can now run the application with: python main.py")
 
+def initialize_configuration():
+    """Initialize default configuration values"""
+    from models import Configuration, db
+    
+    # Company Information
+    default_configs = [
+        # Company Details
+        ('company_name', 'Smart Bakery Manager', 'Company name displayed on invoices and reports', 'company', 'string'),
+        ('company_tagline', 'Premium Artisan Bakery', 'Company tagline or subtitle', 'company', 'string'),
+        ('company_address', '123 Baker Street, Bakery District', 'Company address', 'company', 'text'),
+        ('company_phone', '(555) 123-BAKE', 'Company phone number', 'company', 'string'),
+        ('company_email', 'orders@smartbakery.com', 'Company email address', 'company', 'string'),
+        ('company_website', 'www.smartbakery.com', 'Company website', 'company', 'string'),
+        
+        # Invoice Settings
+        ('invoice_prefix', 'INV', 'Prefix for invoice numbers', 'invoice', 'string'),
+        ('invoice_start_number', '1000', 'Starting invoice number', 'invoice', 'integer'),
+        ('tax_rate', '8.5', 'Default tax rate percentage', 'invoice', 'float'),
+        ('currency_symbol', '$', 'Currency symbol for invoices', 'invoice', 'string'),
+        ('invoice_terms', 'Payment due within 30 days', 'Default payment terms', 'invoice', 'text'),
+        ('invoice_footer', 'Thank you for choosing Smart Bakery Manager!', 'Invoice footer message', 'invoice', 'text'),
+        
+        # System Settings
+        ('default_order_status', 'pending', 'Default status for new orders', 'system', 'string'),
+        ('auto_generate_order_numbers', 'true', 'Automatically generate order numbers', 'system', 'boolean'),
+        ('order_number_prefix', 'ORD', 'Prefix for order numbers', 'system', 'string'),
+        ('order_number_start', '1000', 'Starting order number', 'system', 'integer'),
+        ('enable_ai_insights', 'true', 'Enable AI insights generation', 'system', 'boolean'),
+        ('ai_insight_frequency', '24', 'AI insights generation frequency in hours', 'system', 'integer'),
+        
+        # Inventory Settings
+        ('default_min_stock', '10', 'Default minimum stock level', 'inventory', 'integer'),
+        ('default_max_stock', '100', 'Default maximum stock level', 'inventory', 'integer'),
+        ('low_stock_threshold', '5', 'Threshold for low stock alerts', 'inventory', 'integer'),
+        ('enable_stock_alerts', 'true', 'Enable low stock alerts', 'inventory', 'boolean'),
+        
+        # Delivery Settings
+        ('delivery_fee', '5.00', 'Default delivery fee', 'delivery', 'float'),
+        ('free_delivery_threshold', '50.00', 'Minimum order amount for free delivery', 'delivery', 'float'),
+        ('delivery_time_slots', '["9:00 AM", "12:00 PM", "3:00 PM", "6:00 PM"]', 'Available delivery time slots', 'delivery', 'json'),
+        ('max_delivery_distance', '25', 'Maximum delivery distance in miles', 'delivery', 'integer'),
+        
+        # Catering Settings
+        ('catering_deposit_percentage', '25', 'Required deposit percentage for catering orders', 'catering', 'integer'),
+        ('catering_advance_notice', '72', 'Minimum advance notice for catering orders in hours', 'catering', 'integer'),
+        ('catering_min_guest_count', '10', 'Minimum guest count for catering orders', 'catering', 'integer'),
+        ('catering_setup_fee', '25.00', 'Default setup fee for catering orders', 'catering', 'float'),
+        
+        # Notification Settings
+        ('email_notifications', 'true', 'Enable email notifications', 'notifications', 'boolean'),
+        ('sms_notifications', 'false', 'Enable SMS notifications', 'notifications', 'boolean'),
+        ('order_confirmation_email', 'true', 'Send order confirmation emails', 'notifications', 'boolean'),
+        ('delivery_reminder_email', 'true', 'Send delivery reminder emails', 'notifications', 'boolean'),
+        
+        # Report Settings
+        ('report_logo_enabled', 'true', 'Include logo in reports', 'reports', 'boolean'),
+        ('report_footer_text', 'Generated by Smart Bakery Manager', 'Footer text for reports', 'reports', 'text'),
+        ('daily_report_recipients', '["manager@smartbakery.com"]', 'Email addresses for daily reports', 'reports', 'json'),
+        ('auto_generate_reports', 'true', 'Automatically generate daily reports', 'reports', 'boolean'),
+    ]
+    
+    for key, value, description, category, data_type in default_configs:
+        existing = Configuration.query.filter_by(key=key).first()
+        if not existing:
+            config = Configuration(
+                key=key,
+                value=value,
+                description=description,
+                category=category,
+                data_type=data_type
+            )
+            db.session.add(config)
+    
+    db.session.commit()
+    print("Configuration initialized successfully!")
+
+
 if __name__ == '__main__':
-    setup_database()
+    with app.app_context():
+        setup_database()
+        initialize_configuration()
+        print("Database setup completed!")

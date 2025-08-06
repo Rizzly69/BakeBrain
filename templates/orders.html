@@ -64,6 +64,10 @@
             <h3 class="card-title">Orders</h3>
             <div style="display: flex; gap: 10px;">
                 <span class="badge badge-info">{{ orders.total }} Total Orders</span>
+                {% if orders.items %}
+                <span class="badge badge-success">{{ orders.items|selectattr('status.value', 'eq', 'delivered')|list|length }} Delivered</span>
+                <span class="badge badge-warning">{{ orders.items|selectattr('status.value', 'eq', 'pending')|list|length }} Pending</span>
+                {% endif %}
             </div>
         </div>
         
@@ -79,9 +83,6 @@
                         <th>Amount</th>
                         <th>Status</th>
                         <th>Created</th>
-                        {% if current_user.role.name == 'catering' or (orders.items and orders.items[0].order_type.value == 'catering') %}
-                        <th>Event Date</th>
-                        {% endif %}
                         <th>Actions</th>
                     </tr>
                 </thead>
@@ -114,6 +115,11 @@
                                 {{ order.guest_count }} guests
                             </div>
                             {% endif %}
+                            {% if order.order_type.value == 'catering' and order.event_date %}
+                            <div style="font-size: 12px; color: var(--text-muted);">
+                                Event: {{ order.event_date.strftime('%m/%d/%Y') }}
+                            </div>
+                            {% endif %}
                         </td>
                         <td>
                             <div style="font-weight: 600;">${{ "%.2f"|format(order.total_amount) }}</div>
@@ -131,13 +137,8 @@
                         <td class="timestamp" data-datetime="{{ order.created_at.isoformat() }}">
                             {{ order.created_at.strftime('%m/%d/%Y %H:%M') }}
                         </td>
-                        {% if order.order_type.value == 'catering' and order.event_date %}
-                        <td class="timestamp" data-datetime="{{ order.event_date.isoformat() }}">
-                            {{ order.event_date.strftime('%m/%d/%Y %H:%M') }}
-                        </td>
-                        {% endif %}
                         <td>
-                            <div style="display: flex; gap: 5px;">
+                            <div style="display: flex; gap: 5px; flex-wrap: wrap;">
                                 <button class="btn btn-secondary" style="font-size: 12px; padding: 4px 8px;"
                                         onclick="viewOrderDetails({{ order.id }})"
                                         data-tooltip="View details">
@@ -149,6 +150,14 @@
                                    data-tooltip="Download Invoice">
                                     <i data-feather="download" style="width: 14px; height: 14px;"></i>
                                 </a>
+                                
+                                {% if current_user.role.name in ['admin', 'manager', 'staff'] %}
+                                <a href="{{ url_for('add_order_item', order_id=order.id) }}" 
+                                   class="btn btn-info" style="font-size: 12px; padding: 4px 8px;"
+                                   data-tooltip="Add Items">
+                                    <i data-feather="plus" style="width: 14px; height: 14px;"></i>
+                                </a>
+                                {% endif %}
                                 
                                 {% if current_user.role.name in ['admin', 'manager', 'staff'] and order.status.value not in ['delivered', 'cancelled'] %}
                                 <div class="dropdown" style="position: relative;">
@@ -227,6 +236,21 @@
     </div>
 </div>
 
+<!-- Order Details Modal -->
+<div class="modal fade" id="orderDetailsModal" tabindex="-1">
+    <div class="modal-dialog modal-lg">
+        <div class="modal-content">
+            <div class="modal-header">
+                <h5 class="modal-title">Order Details</h5>
+                <button type="button" class="btn-close" data-bs-dismiss="modal"></button>
+            </div>
+            <div class="modal-body" id="orderDetailsContent">
+                <!-- Content will be loaded here -->
+            </div>
+        </div>
+    </div>
+</div>
+
 <style>
 .page-header {
     display: flex;
@@ -244,6 +268,11 @@
     position: relative;
 }
 
+.status-badge {
+    font-size: 11px;
+    padding: 4px 8px;
+}
+
 @media (max-width: 768px) {
     .page-header {
         flex-direction: column;
@@ -253,6 +282,16 @@
     
     .header-actions {
         justify-content: center;
+    }
+    
+    .table td {
+        padding: 8px 4px;
+    }
+    
+    .table td > div {
+        display: flex;
+        flex-direction: column;
+        gap: 2px;
     }
 }
 </style>
@@ -274,8 +313,39 @@ function toggleStatusDropdown(orderId) {
 }
 
 function viewOrderDetails(orderId) {
-    // This would typically open a modal or navigate to a detailed view
-    showNotification(`Order details for Order ID: ${orderId}`, 'info');
+    // Load order details via AJAX
+    fetch(`/api/order/${orderId}/details`)
+        .then(response => response.json())
+        .then(data => {
+            document.getElementById('orderDetailsContent').innerHTML = data.html;
+            const modal = new bootstrap.Modal(document.getElementById('orderDetailsModal'));
+            modal.show();
+        })
+        .catch(error => {
+            showNotification('Error loading order details', 'error');
+        });
+}
+
+function updateOrderStatus(orderId, newStatus) {
+    fetch(`/api/order/${orderId}/status`, {
+        method: 'POST',
+        headers: {
+            'Content-Type': 'application/json',
+        },
+        body: JSON.stringify({ status: newStatus })
+    })
+    .then(response => response.json())
+    .then(data => {
+        if (data.success) {
+            showNotification(`Order status updated to ${newStatus}`, 'success');
+            location.reload();
+        } else {
+            showNotification(data.message || 'Error updating order status', 'error');
+        }
+    })
+    .catch(error => {
+        showNotification('Error updating order status', 'error');
+    });
 }
 
 // Close dropdowns when clicking outside

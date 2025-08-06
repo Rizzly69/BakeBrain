@@ -1,0 +1,139 @@
+{% extends "base.html" %}
+
+{% block title %}Update Inventory - Smart Bakery Management{% endblock %}
+
+{% block content %}
+<div class="form-container">
+    <div class="card">
+        <div class="card-header">
+            <h2 class="card-title">
+                <i data-feather="edit-3"></i>
+                Update Inventory: {{ inventory_item.product.name }}
+            </h2>
+        </div>
+        <div class="card-body">
+            <div class="product-info">
+                <h3>Product Information</h3>
+                <p><strong>Product:</strong> {{ inventory_item.product.name }}</p>
+                <p><strong>SKU:</strong> {{ inventory_item.product.sku }}</p>
+                <p><strong>Category:</strong> {{ inventory_item.product.category.name }}</p>
+                <p><strong>Price:</strong> ${{ "%.2f"|format(inventory_item.product.price) }}</p>
+            </div>
+            
+            <form method="POST">
+                <div class="form-row">
+                    <div class="form-group">
+                        <label class="form-label">Current Quantity</label>
+                        <input type="number" name="quantity" class="form-control" 
+                               value="{{ inventory_item.quantity }}" min="0" required>
+                    </div>
+                    
+                    <div class="form-group">
+                        <label class="form-label">Minimum Stock Level</label>
+                        <input type="number" name="min_stock_level" class="form-control" 
+                               value="{{ inventory_item.min_stock_level }}" min="0" required>
+                    </div>
+                    
+                    <div class="form-group">
+                        <label class="form-label">Maximum Stock Level</label>
+                        <input type="number" name="max_stock_level" class="form-control" 
+                               value="{{ inventory_item.max_stock_level }}" min="1" required>
+                    </div>
+                </div>
+                
+                <div class="stock-status">
+                    <h4>Stock Status</h4>
+                    {% if inventory_item.is_low_stock() %}
+                        <div class="alert alert-warning">
+                            <i data-feather="alert-triangle"></i>
+                            Low Stock Alert! Current quantity is below minimum level.
+                        </div>
+                    {% else %}
+                        <div class="alert alert-success">
+                            <i data-feather="check-circle"></i>
+                            Stock level is adequate.
+                        </div>
+                    {% endif %}
+                </div>
+                
+                <div class="form-actions">
+                    <button type="submit" class="btn btn-primary">
+                        <i data-feather="save"></i>
+                        Update Inventory
+                    </button>
+                    <a href="{{ url_for('inventory') }}" class="btn btn-secondary">
+                        <i data-feather="x"></i>
+                        Cancel
+                    </a>
+                </div>
+            </form>
+        </div>
+    </div>
+</div>
+
+<style>
+.form-container {
+    max-width: 800px;
+    margin: 0 auto;
+}
+
+.product-info {
+    background: var(--bg-tertiary);
+    padding: 20px;
+    border-radius: 8px;
+    margin-bottom: 30px;
+}
+
+.product-info h3 {
+    margin-bottom: 15px;
+    color: var(--neon-cyan);
+}
+
+.product-info p {
+    margin: 8px 0;
+}
+
+.form-row {
+    display: grid;
+    grid-template-columns: 1fr 1fr 1fr;
+    gap: 20px;
+    margin-bottom: 30px;
+}
+
+.stock-status {
+    margin-bottom: 30px;
+}
+
+.stock-status h4 {
+    margin-bottom: 15px;
+    color: var(--text-primary);
+}
+
+.form-actions {
+    display: flex;
+    gap: 15px;
+    margin-top: 30px;
+}
+
+.alert {
+    display: flex;
+    align-items: center;
+    gap: 10px;
+    padding: 15px;
+    border-radius: 8px;
+    margin-bottom: 20px;
+}
+
+.alert-success {
+    background: rgba(16, 185, 129, 0.1);
+    border: 1px solid var(--success);
+    color: var(--success);
+}
+
+.alert-warning {
+    background: rgba(245, 158, 11, 0.1);
+    border: 1px solid var(--warning);
+    color: var(--warning);
+}
+</style>
+{% endblock %} 

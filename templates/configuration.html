@@ -1,0 +1,308 @@
+{% extends "base.html" %}
+
+{% block title %}Configuration - Smart Bakery Manager{% endblock %}
+
+{% block content %}
+<div class="container-fluid">
+    <div class="row">
+        <div class="col-12">
+            <div class="d-flex justify-content-between align-items-center mb-4">
+                <h1 class="h3 mb-0">System Configuration</h1>
+                <div class="btn-group" role="group">
+                    <button type="button" class="btn btn-outline-primary" onclick="saveAllChanges()">
+                        <i class="fas fa-save"></i> Save All Changes
+                    </button>
+                    <button type="button" class="btn btn-outline-secondary" onclick="refreshPage()">
+                        <i class="fas fa-refresh"></i> Refresh
+                    </button>
+                </div>
+            </div>
+
+            <!-- Category Navigation -->
+            <div class="card mb-4">
+                <div class="card-body">
+                    <div class="nav nav-pills" id="config-tabs" role="tablist">
+                        {% for category in categories %}
+                        <button class="nav-link {% if category == current_category %}active{% endif %}" 
+                                onclick="loadCategory('{{ category }}')" 
+                                type="button" role="tab">
+                            {{ category.title() }}
+                        </button>
+                        {% endfor %}
+                    </div>
+                </div>
+            </div>
+
+            <!-- Configuration Content -->
+            <div class="card">
+                <div class="card-header">
+                    <h5 class="card-title mb-0">{{ current_category.title() }} Settings</h5>
+                </div>
+                <div class="card-body">
+                    {% if configs %}
+                    <div class="table-responsive">
+                        <table class="table table-hover">
+                            <thead>
+                                <tr>
+                                    <th style="width: 25%;">Setting</th>
+                                    <th style="width: 15%;">Value</th>
+                                    <th style="width: 40%;">Description</th>
+                                    <th style="width: 10%;">Type</th>
+                                    <th style="width: 10%;">Actions</th>
+                                </tr>
+                            </thead>
+                            <tbody>
+                                {% for config in configs %}
+                                <tr data-config-id="{{ config.id }}">
+                                    <td>
+                                        <strong>{{ config.key.replace('_', ' ').title() }}</strong>
+                                    </td>
+                                    <td>
+                                        {% if config.data_type == 'boolean' %}
+                                            <div class="form-check form-switch">
+                                                <input class="form-check-input config-value" 
+                                                       type="checkbox" 
+                                                       data-key="{{ config.key }}"
+                                                       data-type="{{ config.data_type }}"
+                                                       {% if config.get_typed_value() %}checked{% endif %}
+                                                       {% if not config.is_editable %}disabled{% endif %}>
+                                            </div>
+                                        {% elif config.data_type == 'text' %}
+                                            <textarea class="form-control config-value" 
+                                                      data-key="{{ config.key }}"
+                                                      data-type="{{ config.data_type }}"
+                                                      rows="2"
+                                                      {% if not config.is_editable %}readonly{% endif %}>{{ config.get_typed_value() }}</textarea>
+                                        {% elif config.data_type == 'json' %}
+                                            <textarea class="form-control config-value" 
+                                                      data-key="{{ config.key }}"
+                                                      data-type="{{ config.data_type }}"
+                                                      rows="2"
+                                                      {% if not config.is_editable %}readonly{% endif %}>{{ config.value }}</textarea>
+                                        {% else %}
+                                            <input type="text" 
+                                                   class="form-control config-value" 
+                                                   data-key="{{ config.key }}"
+                                                   data-type="{{ config.data_type }}"
+                                                   value="{{ config.get_typed_value() }}"
+                                                   {% if not config.is_editable %}readonly{% endif %}>
+                                        {% endif %}
+                                    </td>
+                                    <td>
+                                        <small class="text-muted">{{ config.description }}</small>
+                                    </td>
+                                    <td>
+                                        <span class="badge bg-secondary">{{ config.data_type }}</span>
+                                    </td>
+                                    <td>
+                                        <div class="btn-group btn-group-sm" role="group">
+                                            {% if config.is_editable %}
+                                            <a href="{{ url_for('edit_configuration', config_id=config.id) }}" 
+                                               class="btn btn-outline-primary btn-sm">
+                                                <i class="fas fa-edit"></i>
+                                            </a>
+                                            {% endif %}
+                                            {% if current_user.role.name == 'admin' %}
+                                            <button type="button" 
+                                                    class="btn btn-outline-warning btn-sm"
+                                                    onclick="resetConfig({{ config.id }})"
+                                                    title="Reset to default">
+                                                <i class="fas fa-undo"></i>
+                                            </button>
+                                            {% endif %}
+                                        </div>
+                                    </td>
+                                </tr>
+                                {% endfor %}
+                            </tbody>
+                        </table>
+                    </div>
+                    {% else %}
+                    <div class="text-center py-4">
+                        <i class="fas fa-cog fa-3x text-muted mb-3"></i>
+                        <p class="text-muted">No configuration settings found for this category.</p>
+                    </div>
+                    {% endif %}
+                </div>
+            </div>
+        </div>
+    </div>
+</div>
+
+<!-- Save Changes Modal -->
+<div class="modal fade" id="saveModal" tabindex="-1">
+    <div class="modal-dialog">
+        <div class="modal-content">
+            <div class="modal-header">
+                <h5 class="modal-title">Save Configuration Changes</h5>
+                <button type="button" class="btn-close" data-bs-dismiss="modal"></button>
+            </div>
+            <div class="modal-body">
+                <p>Are you sure you want to save all configuration changes?</p>
+                <div id="changeSummary"></div>
+            </div>
+            <div class="modal-footer">
+                <button type="button" class="btn btn-secondary" data-bs-dismiss="modal">Cancel</button>
+                <button type="button" class="btn btn-primary" onclick="confirmSaveChanges()">Save Changes</button>
+            </div>
+        </div>
+    </div>
+</div>
+{% endblock %}
+
+{% block scripts %}
+<script>
+let originalValues = {};
+let changedValues = {};
+
+// Initialize original values
+document.addEventListener('DOMContentLoaded', function() {
+    const inputs = document.querySelectorAll('.config-value');
+    inputs.forEach(input => {
+        const key = input.dataset.key;
+        if (input.type === 'checkbox') {
+            originalValues[key] = input.checked;
+        } else {
+            originalValues[key] = input.value;
+        }
+        
+        // Add change listener
+        input.addEventListener('change', function() {
+            const currentValue = this.type === 'checkbox' ? this.checked : this.value;
+            if (currentValue !== originalValues[key]) {
+                changedValues[key] = currentValue;
+                this.classList.add('is-modified');
+            } else {
+                delete changedValues[key];
+                this.classList.remove('is-modified');
+            }
+        });
+    });
+});
+
+function loadCategory(category) {
+    window.location.href = `{{ url_for('configuration') }}?category=${category}`;
+}
+
+function saveAllChanges() {
+    if (Object.keys(changedValues).length === 0) {
+        showAlert('No changes to save.', 'info');
+        return;
+    }
+    
+    // Show change summary
+    let summary = '<ul>';
+    for (const [key, value] of Object.entries(changedValues)) {
+        summary += `<li><strong>${key.replace('_', ' ').toUpperCase()}:</strong> ${value}</li>`;
+    }
+    summary += '</ul>';
+    
+    document.getElementById('changeSummary').innerHTML = summary;
+    
+    const modal = new bootstrap.Modal(document.getElementById('saveModal'));
+    modal.show();
+}
+
+function confirmSaveChanges() {
+    fetch('{{ url_for("bulk_update_configuration") }}', {
+        method: 'POST',
+        headers: {
+            'Content-Type': 'application/json',
+        },
+        body: JSON.stringify(changedValues)
+    })
+    .then(response => response.json())
+    .then(data => {
+        if (data.success) {
+            showAlert(data.message, 'success');
+            // Update original values
+            for (const [key, value] of Object.entries(changedValues)) {
+                originalValues[key] = value;
+            }
+            changedValues = {};
+            
+            // Remove modified class
+            document.querySelectorAll('.config-value.is-modified').forEach(input => {
+                input.classList.remove('is-modified');
+            });
+            
+            bootstrap.Modal.getInstance(document.getElementById('saveModal')).hide();
+        } else {
+            showAlert(data.message, 'error');
+        }
+    })
+    .catch(error => {
+        showAlert('Error saving configuration: ' + error.message, 'error');
+    });
+}
+
+function resetConfig(configId) {
+    if (confirm('Are you sure you want to reset this configuration to its default value?')) {
+        fetch(`{{ url_for('configuration') }}/reset/${configId}`, {
+            method: 'POST',
+            headers: {
+                'Content-Type': 'application/json',
+            }
+        })
+        .then(response => {
+            if (response.ok) {
+                location.reload();
+            } else {
+                showAlert('Error resetting configuration.', 'error');
+            }
+        })
+        .catch(error => {
+            showAlert('Error resetting configuration: ' + error.message, 'error');
+        });
+    }
+}
+
+function refreshPage() {
+    location.reload();
+}
+
+function showAlert(message, type) {
+    const alertDiv = document.createElement('div');
+    alertDiv.className = `alert alert-${type === 'error' ? 'danger' : type} alert-dismissible fade show`;
+    alertDiv.innerHTML = `
+        ${message}
+        <button type="button" class="btn-close" data-bs-dismiss="alert"></button>
+    `;
+    
+    const container = document.querySelector('.container-fluid');
+    container.insertBefore(alertDiv, container.firstChild);
+    
+    // Auto-dismiss after 5 seconds
+    setTimeout(() => {
+        if (alertDiv.parentNode) {
+            alertDiv.remove();
+        }
+    }, 5000);
+}
+</script>
+
+<style>
+.config-value.is-modified {
+    border-color: #ffc107;
+    box-shadow: 0 0 0 0.2rem rgba(255, 193, 7, 0.25);
+}
+
+.nav-pills .nav-link {
+    color: #6c757d;
+    border: 1px solid #dee2e6;
+    margin-right: 0.5rem;
+    margin-bottom: 0.5rem;
+}
+
+.nav-pills .nav-link.active {
+    background-color: #0d6efd;
+    border-color: #0d6efd;
+    color: white;
+}
+
+.form-check-input:checked {
+    background-color: #0d6efd;
+    border-color: #0d6efd;
+}
+</style>
+{% endblock %} 

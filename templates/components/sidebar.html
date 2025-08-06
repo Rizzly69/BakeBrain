@@ -15,14 +15,12 @@
                 </a>
             </li>
             
-            {% if current_user.role.name in ['admin', 'manager', 'staff'] %}
             <li class="nav-item">
                 <a href="{{ url_for('orders') }}" class="nav-link {{ 'active' if request.endpoint in ['orders', 'new_order'] }}">
                     <i data-feather="shopping-cart" class="nav-icon"></i>
                     Orders
                 </a>
             </li>
-            {% endif %}
             
             {% if current_user.role.name in ['admin', 'manager'] %}
             <li class="nav-item">
@@ -33,9 +31,23 @@
             </li>
             
             <li class="nav-item">
+                <a href="{{ url_for('raw_products') }}" class="nav-link {{ 'active' if request.endpoint in ['raw_products', 'new_raw_product', 'edit_raw_product', 'update_raw_product_stock'] }}">
+                    <i data-feather="layers" class="nav-icon"></i>
+                    Raw Materials
+                </a>
+            </li>
+            
+            <li class="nav-item">
                 <a href="{{ url_for('products') }}" class="nav-link {{ 'active' if request.endpoint in ['products', 'new_product'] }}">
                     <i data-feather="coffee" class="nav-icon"></i>
                     Products
+                </a>
+            </li>
+            
+            <li class="nav-item">
+                <a href="{{ url_for('categories') }}" class="nav-link {{ 'active' if request.endpoint in ['categories', 'new_category'] }}">
+                    <i data-feather="tag" class="nav-icon"></i>
+                    Categories
                 </a>
             </li>
             {% endif %}
@@ -65,6 +77,13 @@
             </li>
             
             <li class="nav-item">
+                <a href="{{ url_for('modifications') }}" class="nav-link {{ 'active' if request.endpoint == 'modifications' }}">
+                    <i data-feather="edit-3" class="nav-icon"></i>
+                    Modifications
+                </a>
+            </li>
+            
+            <li class="nav-item">
                 <a href="{{ url_for('reports') }}" class="nav-link {{ 'active' if request.endpoint == 'reports' }}">
                     <i data-feather="bar-chart-2" class="nav-icon"></i>
                     Reports
@@ -77,11 +96,25 @@
                     AI Insights
                 </a>
             </li>
+            
+            <li class="nav-item">
+                <a href="{{ url_for('configuration') }}" class="nav-link {{ 'active' if request.endpoint in ['configuration', 'edit_configuration'] }}">
+                    <i data-feather="settings" class="nav-icon"></i>
+                    Configuration
+                </a>
+            </li>
+            {% elif current_user.role.name == 'customer' %}
+            <li class="nav-item">
+                <a href="{{ url_for('customer_ai_insights') }}" class="nav-link {{ 'active' if request.endpoint == 'customer_ai_insights' }}">
+                    <i data-feather="zap" class="nav-icon"></i>
+                    AI Recommendations
+                </a>
+            </li>
             {% endif %}
             
             <li class="nav-item" style="margin-top: 20px; border-top: 1px solid var(--bg-tertiary); padding-top: 20px;">
                 <a href="{{ url_for('profile') }}" class="nav-link {{ 'active' if request.endpoint == 'profile' }}">
-                    <i data-feather="settings" class="nav-icon"></i>
+                    <i data-feather="user" class="nav-icon"></i>
                     Profile
                 </a>
             </li>

@@ -476,11 +476,12 @@
 
 <script>
 function editProduct(productId) {
-    showNotification('Product editing would open here', 'info');
+    window.location.href = `/products/${productId}/edit`;
 }
 
 function addToOrder(productId) {
-    showNotification('Product added to order (integration pending)', 'success');
+    // For now, redirect to new order page with product pre-selected
+    window.location.href = `/orders/new?product=${productId}`;
 }
 
 function viewProduct(productId) {
@@ -505,7 +506,7 @@ function viewProduct(productId) {
 }
 
 function showAddProductModal() {
-    showNotification('Add product form would open here', 'info');
+    window.location.href = "{{ url_for('new_product') }}";
 }
 
 function closeModal() {
