@@ -66,6 +66,12 @@
                                     <label for="quantity" class="form-label">Quantity *</label>
                                     <input type="number" name="quantity" id="quantity" class="form-control" 
                                            min="1" value="1" required>
+                                    <div id="inventory-info" class="form-text mt-1" style="display: none;">
+                                        <span id="available-quantity"></span>
+                                        <span id="inventory-warning" class="text-warning" style="display: none;">
+                                            <i class="fas fa-exclamation-triangle"></i> Limited stock available
+                                        </span>
+                                    </div>
                                 </div>
                             </div>
                         </div>
@@ -158,9 +164,70 @@ function updateItemInfo() {
         const quantity = parseInt(quantityInput.value) || 0;
         const total = price * quantity;
         
+        // Fetch inventory information
+        fetchInventoryInfo(selectedOption.value);
+        
         // You could add a display element to show the calculated total
         console.log(`Item total: $${total.toFixed(2)}`);
+    } else {
+        hideInventoryInfo();
     }
+}
+
+function fetchInventoryInfo(productId) {
+    fetch(`/api/products/${productId}/max-quantity`)
+        .then(response => response.json())
+        .then(data => {
+            displayInventoryInfo(data);
+        })
+        .catch(error => {
+            console.error('Error fetching inventory info:', error);
+            hideInventoryInfo();
+        });
+}
+
+function displayInventoryInfo(data) {
+    const inventoryInfo = document.getElementById('inventory-info');
+    const availableQuantity = document.getElementById('available-quantity');
+    const inventoryWarning = document.getElementById('inventory-warning');
+    const quantityInput = document.getElementById('quantity');
+    
+    if (data.max_quantity > 0) {
+        inventoryInfo.style.display = 'block';
+        availableQuantity.textContent = `Available: ${data.max_quantity} units`;
+        
+        // Set max attribute on quantity input
+        quantityInput.setAttribute('max', data.max_quantity);
+        
+        // Show warning if stock is low (less than 10 units)
+        if (data.max_quantity < 10) {
+            inventoryWarning.style.display = 'inline';
+        } else {
+            inventoryWarning.style.display = 'none';
+        }
+        
+        // Add validation
+        quantityInput.addEventListener('input', function() {
+            const value = parseInt(this.value) || 0;
+            if (value > data.max_quantity) {
+                this.setCustomValidity(`Maximum available quantity is ${data.max_quantity}`);
+            } else {
+                this.setCustomValidity('');
+            }
+        });
+    } else {
+        hideInventoryInfo();
+        quantityInput.setCustomValidity('This product is currently out of stock');
+    }
+}
+
+function hideInventoryInfo() {
+    const inventoryInfo = document.getElementById('inventory-info');
+    const quantityInput = document.getElementById('quantity');
+    
+    inventoryInfo.style.display = 'none';
+    quantityInput.removeAttribute('max');
+    quantityInput.setCustomValidity('');
 }
 
 // Set focus to product select on page load

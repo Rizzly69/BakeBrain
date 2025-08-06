@@ -62,6 +62,7 @@
                         <th>Cost/Unit</th>
                         <th>Supplier</th>
                         <th>Location</th>
+                        <th>Expiry Date</th>
                         <th>Status</th>
                         <th>Last Updated</th>
                         <th>Actions</th>
@@ -99,12 +100,50 @@
                         </td>
                         <td>{{ raw_product.location }}</td>
                         <td>
+                            {% if raw_product.expiry_date %}
+                                {% set expiry_status = raw_product.get_expiry_status() %}
+                                <div class="expiry-info">
+                                    <div class="expiry-date {{ expiry_status.status }}">
+                                        {{ raw_product.expiry_date.strftime('%Y-%m-%d') }}
+                                    </div>
+                                    {% if expiry_status.status != 'safe' %}
+                                    <div class="expiry-warning small">
+                                        {{ expiry_status.message }}
+                                    </div>
+                                    {% endif %}
+                                </div>
+                            {% else %}
+                                <span class="text-muted">No expiry</span>
+                            {% endif %}
+                        </td>
+                        <td>
                             {% if raw_product.is_critical_stock() %}
                             <span class="status-badge critical">Critical</span>
                             {% elif raw_product.is_low_stock() %}
                             <span class="status-badge warning">Low Stock</span>
                             {% else %}
                             <span class="status-badge success">In Stock</span>
+                            {% endif %}
+                            
+                            {% if raw_product.expiry_date %}
+                                {% set expiry_status = raw_product.get_expiry_status() %}
+                                {% if expiry_status.status == 'expired' %}
+                                <div class="mt-1">
+                                    <span class="status-badge critical">Expired</span>
+                                </div>
+                                {% elif expiry_status.status == 'expires_today' %}
+                                <div class="mt-1">
+                                    <span class="status-badge warning">Expires Today</span>
+                                </div>
+                                {% elif expiry_status.status == 'expires_soon' %}
+                                <div class="mt-1">
+                                    <span class="status-badge warning">Expires Soon</span>
+                                </div>
+                                {% elif expiry_status.status == 'expires_week' %}
+                                <div class="mt-1">
+                                    <span class="status-badge info">Expires This Week</span>
+                                </div>
+                                {% endif %}
                             {% endif %}
                         </td>
                         <td>
@@ -365,8 +404,31 @@
 <script>
 function orderRawMaterial(materialName, supplierContact) {
     if (supplierContact) {
-        showNotification(`Ordering ${materialName} from ${supplierContact}`, 'info');
-        // In a real application, this could open a phone dialer or email client
+        const quantity = prompt(`Enter quantity to order for ${materialName}:`);
+        if (quantity && !isNaN(quantity) && parseInt(quantity) > 0) {
+            fetch('/api/raw-materials/order', {
+                method: 'POST',
+                headers: {
+                    'Content-Type': 'application/json',
+                },
+                body: JSON.stringify({
+                    material_name: materialName,
+                    supplier_contact: supplierContact,
+                    quantity: parseInt(quantity)
+                })
+            })
+            .then(response => response.json())
+            .then(data => {
+                if (data.success) {
+                    showNotification(`Order placed for ${quantity} units of ${materialName}`, 'success');
+                } else {
+                    showNotification(data.message || 'Error placing order', 'error');
+                }
+            })
+            .catch(error => {
+                showNotification('Error placing order', 'error');
+            });
+        }
     } else {
         showNotification(`No supplier contact available for ${materialName}`, 'warning');
     }

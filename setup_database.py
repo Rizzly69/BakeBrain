@@ -201,6 +201,51 @@ def setup_database():
         
         db.session.commit()
         
+        # Create product recipes
+        print("Creating product recipes...")
+        recipes_data = [
+            ('Artisan Sourdough', 'All-Purpose Flour', 0.5, 'kg'),
+            ('Artisan Sourdough', 'Water', 0.3, 'l'),
+            ('Artisan Sourdough', 'Salt', 0.01, 'kg'),
+            ('Artisan Sourdough', 'Yeast', 0.005, 'kg'),
+            ('Croissant', 'All-Purpose Flour', 0.25, 'kg'),
+            ('Croissant', 'Butter', 0.15, 'kg'),
+            ('Croissant', 'Yeast', 0.01, 'kg'),
+            ('Croissant', 'Salt', 0.005, 'kg'),
+            ('Chocolate Cake', 'All-Purpose Flour', 0.3, 'kg'),
+            ('Chocolate Cake', 'Sugar', 0.4, 'kg'),
+            ('Chocolate Cake', 'Eggs', 4, 'pieces'),
+            ('Chocolate Cake', 'Milk', 0.25, 'l'),
+            ('Chocolate Cake', 'Chocolate Chips', 0.2, 'kg'),
+            ('Chocolate Chip Cookies', 'All-Purpose Flour', 0.15, 'kg'),
+            ('Chocolate Chip Cookies', 'Butter', 0.1, 'kg'),
+            ('Chocolate Chip Cookies', 'Sugar', 0.12, 'kg'),
+            ('Chocolate Chip Cookies', 'Eggs', 1, 'pieces'),
+            ('Chocolate Chip Cookies', 'Chocolate Chips', 0.15, 'kg')
+        ]
+        
+        for product_name, raw_product_name, quantity, unit in recipes_data:
+            product = Product.query.filter_by(name=product_name).first()
+            raw_product = RawProduct.query.filter_by(name=raw_product_name).first()
+            
+            if product and raw_product:
+                # Check if recipe already exists
+                existing_recipe = ProductRecipe.query.filter_by(
+                    product_id=product.id,
+                    raw_product_id=raw_product.id
+                ).first()
+                
+                if not existing_recipe:
+                    recipe = ProductRecipe(
+                        product_id=product.id,
+                        raw_product_id=raw_product.id,
+                        quantity_required=quantity,
+                        unit_of_measure=unit
+                    )
+                    db.session.add(recipe)
+        
+        db.session.commit()
+        
         # Create AI insights
         print("Creating AI insights...")
         insights_data = [
@@ -255,7 +300,7 @@ def initialize_configuration():
         ('invoice_footer', 'Thank you for choosing Smart Bakery Manager!', 'Invoice footer message', 'invoice', 'text'),
         
         # System Settings
-        ('default_order_status', 'pending', 'Default status for new orders', 'system', 'string'),
+        ('default_order_status', 'PENDING', 'Default status for new orders', 'system', 'string'),
         ('auto_generate_order_numbers', 'true', 'Automatically generate order numbers', 'system', 'boolean'),
         ('order_number_prefix', 'ORD', 'Prefix for order numbers', 'system', 'string'),
         ('order_number_start', '1000', 'Starting order number', 'system', 'integer'),

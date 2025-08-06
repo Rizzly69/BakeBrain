@@ -441,11 +441,59 @@
 
 <script>
 function addBulkSchedule() {
-    showNotification('Bulk schedule functionality coming soon!', 'info');
+    const updates = [];
+    const scheduleCells = document.querySelectorAll('.schedule-cell[data-staff-id][data-day]');
+    
+    scheduleCells.forEach(cell => {
+        const staffId = cell.getAttribute('data-staff-id');
+        const day = cell.getAttribute('data-day');
+        const startTime = cell.querySelector('.start-time')?.value;
+        const endTime = cell.querySelector('.end-time')?.value;
+        const position = cell.querySelector('.position')?.value || 'General';
+        
+        if (startTime && endTime) {
+            updates.push({
+                staff_id: staffId,
+                day: day,
+                start_time: startTime,
+                end_time: endTime,
+                position: position
+            });
+        }
+    });
+    
+    if (updates.length === 0) {
+        showNotification('No schedule changes to apply', 'warning');
+        return;
+    }
+    
+    fetch('/staff/schedule/weekly', {
+        method: 'POST',
+        headers: {
+            'Content-Type': 'application/x-www-form-urlencoded',
+        },
+        body: new URLSearchParams({
+            'action': 'bulk_update',
+            'schedule_updates': JSON.stringify(updates)
+        })
+    })
+    .then(response => response.json())
+    .then(data => {
+        if (data.success) {
+            showNotification('Bulk schedule updates applied successfully!', 'success');
+            setTimeout(() => window.location.reload(), 1000);
+        } else {
+            showNotification(data.message || 'Error applying bulk updates', 'error');
+        }
+    })
+    .catch(error => {
+        showNotification('Error applying bulk updates', 'error');
+    });
 }
 
 function exportSchedule() {
-    showNotification('Export functionality coming soon!', 'info');
+    const weekParam = new URLSearchParams(window.location.search).get('week') || '';
+    window.location.href = `/api/modifications/export?week=${weekParam}`;
 }
 
 function printSchedule() {
@@ -453,8 +501,34 @@ function printSchedule() {
 }
 
 function viewModificationHistory(scheduleId) {
-    // Show modification history in a modal
-    showNotification('Modification history view coming soon!', 'info');
+    fetch(`/api/schedule/${scheduleId}/modifications`)
+        .then(response => response.json())
+        .then(data => {
+            const modal = document.getElementById('modificationHistoryModal');
+            const modalBody = modal.querySelector('.modal-body');
+            
+            modalBody.innerHTML = `
+                <div class="modification-history">
+                    ${data.modifications.map(mod => `
+                        <div class="modification-item">
+                            <div class="modification-header">
+                                <span class="modification-type">${mod.modification_type}</span>
+                                <span class="modification-date">${mod.created_at}</span>
+                            </div>
+                            <div class="modification-details">
+                                ${mod.changes ? `<p><strong>Changes:</strong> ${mod.changes}</p>` : ''}
+                                ${mod.reason ? `<p><strong>Reason:</strong> ${mod.reason}</p>` : ''}
+                            </div>
+                        </div>
+                    `).join('')}
+                </div>
+            `;
+            
+            new bootstrap.Modal(modal).show();
+        })
+        .catch(error => {
+            showNotification('Error loading modification history', 'error');
+        });
 }
 
 // Add print styles

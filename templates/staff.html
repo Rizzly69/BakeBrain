@@ -340,8 +340,7 @@ function closeStaffDetailsModal() {
     document.getElementById('staffDetailsModal').style.display = 'none';
 }
 function editStaff(staffId) {
-    showNotification(`Editing Staff ID: ${staffId}`, 'info');
-    // This would typically open an edit form modal
+    window.location.href = `/staff/${staffId}/edit`;
 }
 function manageSchedule(staffId) {
     window.location.href = `/staff/${staffId}/schedule`;

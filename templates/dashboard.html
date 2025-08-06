@@ -125,7 +125,7 @@
                             </td>
                             <td>${{ "%.2f"|format(order.total_amount) }}</td>
                             <td>
-                                <span class="badge badge-{{ 'success' if order.status.value == 'delivered' else 'warning' if order.status.value == 'pending' else 'info' }}">
+                                <span class="badge badge-{{ 'success' if order.status.value == 'DELIVERED' else 'warning' if order.status.value == 'PENDING' else 'info' }}">
                                     {{ order.status.value.replace('_', ' ').title() }}
                                 </span>
                             </td>
@@ -194,18 +194,18 @@
                             <td>{{ order.order_number }}</td>
                             <td>{{ order.customer.first_name }} {{ order.customer.last_name }}</td>
                             <td>
-                                <span class="status-badge badge badge-{{ 'info' if order.status.value in ['confirmed', 'in_preparation'] else 'warning' }}">
+                                <span class="status-badge badge badge-{{ 'info' if order.status.value in ['CONFIRMED', 'IN_PREPARATION'] else 'warning' }}">
                                     {{ order.status.value.replace('_', ' ').title() }}
                                 </span>
                             </td>
                             <td>${{ "%.2f"|format(order.total_amount) }}</td>
                             <td>
-                                {% if order.status.value == 'confirmed' %}
-                                <button class="btn btn-secondary" onclick="updateOrderStatus({{ order.id }}, 'in_preparation')">
+                                {% if order.status.value == 'CONFIRMED' %}
+                                <button class="btn btn-secondary" onclick="updateOrderStatus({{ order.id }}, 'IN_PREPARATION')">
                                     Start Preparation
                                 </button>
-                                {% elif order.status.value == 'in_preparation' %}
-                                <button class="btn btn-success" onclick="updateOrderStatus({{ order.id }}, 'ready')">
+                                {% elif order.status.value == 'IN_PREPARATION' %}
+                                <button class="btn btn-success" onclick="updateOrderStatus({{ order.id }}, 'READY')">
                                     Mark Ready
                                 </button>
                                 {% endif %}
@@ -254,7 +254,7 @@
                             </td>
                             <td>${{ "%.2f"|format(order.total_amount) }}</td>
                             <td>
-                                <span class="badge badge-{{ 'success' if order.status.value == 'delivered' else 'warning' if order.status.value == 'pending' else 'info' }}">
+                                <span class="badge badge-{{ 'success' if order.status.value == 'DELIVERED' else 'warning' if order.status.value == 'PENDING' else 'info' }}">
                                     {{ order.status.value.replace('_', ' ').title() }}
                                 </span>
                             </td>
@@ -289,6 +289,18 @@
         const period = document.getElementById('revenuePeriod').value;
         console.log('Updating revenue chart with period:', period);
         
+        // Update chart title based on period
+        const chartTitle = document.querySelector('.card-header h3');
+        if (chartTitle) {
+            const periodText = {
+                '7d': 'Last 7 Days',
+                '30d': 'Last 30 Days', 
+                '90d': 'Last 90 Days',
+                '1y': 'Last Year'
+            }[period] || 'Revenue Trend';
+            chartTitle.textContent = `Revenue Trend - ${periodText}`;
+        }
+        
         fetch(`/api/chart-data?period=${period}`)
             .then(response => response.json())
             .then(data => {
@@ -303,7 +315,7 @@
                     data: {
                         labels: data.revenue_labels,
                         datasets: [{
-                            label: 'Revenue',
+                            label: getRevenueLabel(period),
                             data: data.revenue_data,
                             backgroundColor: 'rgba(0, 255, 255, 0.1)',
                             borderColor: '#00ffff',
@@ -319,11 +331,24 @@
                                 labels: {
                                     color: '#b0b0b0'
                                 }
+                            },
+                            title: {
+                                display: true,
+                                text: `Revenue Trend - ${getPeriodText(period)}`,
+                                color: '#b0b0b0',
+                                font: {
+                                    size: 16
+                                }
                             }
                         },
                         scales: {
                             y: {
                                 beginAtZero: true,
+                                title: {
+                                    display: true,
+                                    text: 'Revenue ($)',
+                                    color: '#b0b0b0'
+                                },
                                 grid: {
                                     color: 'rgba(255, 255, 255, 0.1)'
                                 },
@@ -335,6 +360,11 @@
                                 }
                             },
                             x: {
+                                title: {
+                                    display: true,
+                                    text: getXAxisLabel(period),
+                                    color: '#b0b0b0'
+                                },
                                 grid: {
                                     color: 'rgba(255, 255, 255, 0.1)'
                                 },
@@ -351,10 +381,48 @@
             });
     }
     
+    // Helper functions for dynamic labels
+    function getPeriodText(period) {
+        const periodMap = {
+            '7d': 'Last 7 Days',
+            '30d': 'Last 30 Days',
+            '90d': 'Last 90 Days', 
+            '1y': 'Last Year'
+        };
+        return periodMap[period] || 'Revenue Trend';
+    }
+    
+    function getRevenueLabel(period) {
+        const labelMap = {
+            '7d': 'Daily Revenue',
+            '30d': 'Daily Revenue',
+            '90d': 'Daily Revenue',
+            '1y': 'Monthly Revenue'
+        };
+        return labelMap[period] || 'Revenue';
+    }
+    
+    function getXAxisLabel(period) {
+        const labelMap = {
+            '7d': 'Days',
+            '30d': 'Days',
+            '90d': 'Days',
+            '1y': 'Months'
+        };
+        return labelMap[period] || 'Time Period';
+    }
+    
     // Function to update orders chart
     function updateOrdersChart() {
         const period = document.getElementById('ordersPeriod').value;
         console.log('Updating orders chart with period:', period);
+        
+        // Update chart title based on period
+        const ordersChartTitle = document.querySelectorAll('.card-header h3')[1];
+        if (ordersChartTitle) {
+            const periodText = getPeriodText(period);
+            ordersChartTitle.textContent = `Order Status Distribution - ${periodText}`;
+        }
         
         fetch(`/api/chart-data?period=${period}`)
             .then(response => response.json())
@@ -397,6 +465,14 @@
                                 labels: {
                                     color: '#b0b0b0',
                                     padding: 20
+                                }
+                            },
+                            title: {
+                                display: true,
+                                text: `Order Status Distribution - ${getPeriodText(period)}`,
+                                color: '#b0b0b0',
+                                font: {
+                                    size: 16
                                 }
                             }
                         }

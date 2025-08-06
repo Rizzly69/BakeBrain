@@ -4,30 +4,44 @@ from flask_sqlalchemy import SQLAlchemy
 from flask_login import UserMixin
 from sqlalchemy import Enum
 import enum
+import secrets
+import string
 
 # Create a new SQLAlchemy instance
 db = SQLAlchemy()
 
-
-
-
-class Notification(db.Model):
-    __tablename__ = 'notification'
+class EmailVerification(db.Model):
+    __tablename__ = 'email_verification'
     id = db.Column(db.Integer, primary_key=True)
-    user_id = db.Column(db.Integer, db.ForeignKey('user.id'), nullable=False)
-    message = db.Column(db.String(255), nullable=False)
-    is_read = db.Column(db.Boolean, default=False)
+    email = db.Column(db.String(120), nullable=False)
+    otp = db.Column(db.String(6), nullable=False)
+    is_used = db.Column(db.Boolean, default=False)
+    expires_at = db.Column(db.DateTime, nullable=False)
     created_at = db.Column(db.DateTime, default=datetime.utcnow)
-
-    user = db.relationship('User', backref=db.backref('notifications', lazy=True))
-
+    
     @staticmethod
-    def create(user_id, message):
-        from app import db
-        notif = Notification(user_id=user_id, message=message)
-        db.session.add(notif)
-        db.session.commit()
-        return notif
+    def generate_otp():
+        return ''.join(secrets.choice(string.digits) for _ in range(6))
+    
+    def is_expired(self):
+        return datetime.utcnow() > self.expires_at
+
+class PasswordReset(db.Model):
+    __tablename__ = 'password_reset'
+    id = db.Column(db.Integer, primary_key=True)
+    email = db.Column(db.String(120), nullable=False)
+    token = db.Column(db.String(64), nullable=False, unique=True)
+    is_used = db.Column(db.Boolean, default=False)
+    expires_at = db.Column(db.DateTime, nullable=False)
+    created_at = db.Column(db.DateTime, default=datetime.utcnow)
+    
+    @staticmethod
+    def generate_token():
+        return secrets.token_urlsafe(32)
+    
+    def is_expired(self):
+        return datetime.utcnow() > self.expires_at
+
 
 # Create a new SQLAlchemy instance
 db = SQLAlchemy()
@@ -51,6 +65,7 @@ class User(UserMixin, db.Model):
     phone = db.Column(db.String(20))
     role_id = db.Column(db.Integer, db.ForeignKey('role.id'), nullable=False)
     active = db.Column(db.Boolean, default=True)
+    email_verified = db.Column(db.Boolean, default=False)
     created_at = db.Column(db.DateTime, default=datetime.utcnow)
     last_login = db.Column(db.DateTime)
     
@@ -68,6 +83,25 @@ class User(UserMixin, db.Model):
     schedule_modifications = db.relationship('ScheduleModification', backref='modifier_user', lazy=True, foreign_keys='ScheduleModification.modified_by', overlaps="modifier_user,schedule_modifications_tracked,schedule_modifications_made,modifier")
 
 
+class Notification(db.Model):
+    __tablename__ = 'notification'
+    id = db.Column(db.Integer, primary_key=True)
+    user_id = db.Column(db.Integer, db.ForeignKey('user.id'), nullable=False)
+    message = db.Column(db.String(255), nullable=False)
+    is_read = db.Column(db.Boolean, default=False)
+    created_at = db.Column(db.DateTime, default=datetime.utcnow)
+
+    user = db.relationship('User', backref=db.backref('notifications', lazy=True))
+
+    @staticmethod
+    def create(user_id, message):
+        from app import db
+        notif = Notification(user_id=user_id, message=message)
+        db.session.add(notif)
+        db.session.commit()
+        return notif
+
+
 class Category(db.Model):
     __tablename__ = 'category'
     id = db.Column(db.Integer, primary_key=True)
@@ -77,6 +111,40 @@ class Category(db.Model):
     
     # Relationships
     products = db.relationship('Product', backref='category', lazy=True)
+
+
+class ProductRecipe(db.Model):
+    __tablename__ = 'product_recipe'
+    id = db.Column(db.Integer, primary_key=True)
+    product_id = db.Column(db.Integer, db.ForeignKey('product.id'), nullable=False)
+    raw_product_id = db.Column(db.Integer, db.ForeignKey('raw_product.id'), nullable=False)
+    quantity_required = db.Column(db.Numeric(10, 3), nullable=False)  # Amount of raw product needed per product unit
+    unit_of_measure = db.Column(db.String(32), nullable=False)  # Unit for the recipe (e.g., grams, pieces)
+    created_at = db.Column(db.DateTime, default=datetime.utcnow)
+    
+    # Relationships
+    product = db.relationship('Product', backref='recipes')
+    raw_product = db.relationship('RawProduct', backref='used_in_recipes')
+
+class PurchaseOrder(db.Model):
+    __tablename__ = 'purchase_order'
+    
+    id = db.Column(db.Integer, primary_key=True)
+    raw_product_id = db.Column(db.Integer, db.ForeignKey('raw_product.id'), nullable=False)
+    quantity = db.Column(db.Integer, nullable=False)
+    supplier_contact = db.Column(db.String(100), nullable=False)
+    ordered_by = db.Column(db.Integer, db.ForeignKey('user.id'), nullable=False)
+    status = db.Column(db.String(20), default='pending')  # pending, confirmed, delivered, cancelled
+    order_date = db.Column(db.DateTime, default=datetime.utcnow)
+    delivery_date = db.Column(db.DateTime, nullable=True)
+    notes = db.Column(db.Text, nullable=True)
+    
+    # Relationships
+    raw_product = db.relationship('RawProduct', backref='purchase_orders')
+    ordered_by_user = db.relationship('User', backref='purchase_orders')
+    
+    def __repr__(self):
+        return f'<ProductRecipe {self.product.name} -> {self.raw_product.name}: {self.quantity_required} {self.unit_of_measure}>'
 
 
 class Product(db.Model):
@@ -96,6 +164,86 @@ class Product(db.Model):
     # Relationships
     inventory_items = db.relationship('Inventory', backref='product', lazy=True)
     order_items = db.relationship('OrderItem', backref='product', lazy=True)
+    
+    def get_available_quantity(self):
+        """Get the current available quantity in inventory"""
+        inventory = Inventory.query.filter_by(product_id=self.id).first()
+        return inventory.quantity if inventory else 0
+    
+    def get_max_orderable_quantity(self):
+        """Get the maximum quantity that can be ordered based on inventory and raw materials"""
+        available_inventory = self.get_available_quantity()
+        
+        # If there's sufficient inventory, return that
+        if available_inventory > 0:
+            return available_inventory
+        
+        # If no inventory but has recipe, calculate based on raw materials
+        if self.recipes:
+            max_from_raw_materials = float('inf')
+            for recipe in self.recipes:
+                if recipe.raw_product.current_stock > 0:
+                    # Calculate how many products can be made from this raw material
+                    possible_quantity = int(recipe.raw_product.current_stock / recipe.quantity_required)
+                    max_from_raw_materials = min(max_from_raw_materials, possible_quantity)
+                else:
+                    max_from_raw_materials = 0
+                    break
+            
+            return max_from_raw_materials if max_from_raw_materials != float('inf') else 0
+        
+        return 0
+    
+    def can_make_quantity(self, quantity):
+        """Check if we can make the specified quantity based on raw materials"""
+        if not self.recipes:
+            return self.get_available_quantity() >= quantity
+        
+        for recipe in self.recipes:
+            required_raw_quantity = recipe.quantity_required * quantity
+            if recipe.raw_product.current_stock < required_raw_quantity:
+                return False
+        return True
+    
+    def consume_raw_materials(self, quantity):
+        """Consume raw materials for the specified product quantity"""
+        if not self.recipes:
+            return True
+        
+        try:
+            for recipe in self.recipes:
+                required_raw_quantity = recipe.quantity_required * quantity
+                if recipe.raw_product.current_stock < required_raw_quantity:
+                    return False
+                
+                # Reduce raw material stock
+                recipe.raw_product.current_stock -= required_raw_quantity
+                recipe.raw_product.last_updated = datetime.utcnow()
+            
+            db.session.commit()
+            return True
+        except Exception as e:
+            db.session.rollback()
+            return False
+    
+    def restore_raw_materials(self, quantity):
+        """Restore raw materials for the specified product quantity (used when order is cancelled)"""
+        if not self.recipes:
+            return True
+        
+        try:
+            for recipe in self.recipes:
+                required_raw_quantity = recipe.quantity_required * quantity
+                
+                # Restore raw material stock
+                recipe.raw_product.current_stock += required_raw_quantity
+                recipe.raw_product.last_updated = datetime.utcnow()
+            
+            db.session.commit()
+            return True
+        except Exception as e:
+            db.session.rollback()
+            return False
 
 
 class RawProduct(db.Model):
@@ -122,6 +270,37 @@ class RawProduct(db.Model):
     
     def is_critical_stock(self):
         return self.current_stock <= self.reorder_point
+    
+    def is_expiring_soon(self, days_threshold=7):
+        """Check if the product is expiring within the specified days"""
+        if not self.expiry_date:
+            return False
+        days_until_expiry = (self.expiry_date - date.today()).days
+        return 0 <= days_until_expiry <= days_threshold
+    
+    def is_expired(self):
+        """Check if the product has expired"""
+        if not self.expiry_date:
+            return False
+        return self.expiry_date < date.today()
+    
+    def get_expiry_status(self):
+        """Get expiry status with details"""
+        if not self.expiry_date:
+            return {'status': 'no_expiry', 'message': 'No expiry date set'}
+        
+        days_until_expiry = (self.expiry_date - date.today()).days
+        
+        if days_until_expiry < 0:
+            return {'status': 'expired', 'message': f'Expired {abs(days_until_expiry)} days ago', 'days': days_until_expiry}
+        elif days_until_expiry == 0:
+            return {'status': 'expires_today', 'message': 'Expires today', 'days': days_until_expiry}
+        elif days_until_expiry <= 3:
+            return {'status': 'expires_soon', 'message': f'Expires in {days_until_expiry} days', 'days': days_until_expiry}
+        elif days_until_expiry <= 7:
+            return {'status': 'expires_week', 'message': f'Expires in {days_until_expiry} days', 'days': days_until_expiry}
+        else:
+            return {'status': 'safe', 'message': f'Expires in {days_until_expiry} days', 'days': days_until_expiry}
 
 
 class Inventory(db.Model):
@@ -139,18 +318,18 @@ class Inventory(db.Model):
 
 
 class OrderStatus(enum.Enum):
-    PENDING = "pending"
-    CONFIRMED = "confirmed"
-    IN_PREPARATION = "in_preparation"
-    READY = "ready"
-    DELIVERED = "delivered"
-    CANCELLED = "cancelled"
+    PENDING = "PENDING"
+    CONFIRMED = "CONFIRMED"
+    IN_PREPARATION = "IN_PREPARATION"
+    READY = "READY"
+    DELIVERED = "DELIVERED"
+    CANCELLED = "CANCELLED"
 
 
 class OrderType(enum.Enum):
-    REGULAR = "regular"
-    CATERING = "catering"
-    ONLINE = "online"
+    REGULAR = "REGULAR"
+    CATERING = "CATERING"
+    ONLINE = "ONLINE"
 
 
 class Order(db.Model):
@@ -242,6 +421,36 @@ class AIInsight(db.Model):
     data = db.Column(db.JSON)  # Additional structured data
     is_active = db.Column(db.Boolean, default=True)
     created_at = db.Column(db.DateTime, default=datetime.utcnow)
+
+
+class UserSession(db.Model):
+    __tablename__ = 'user_session'
+    id = db.Column(db.Integer, primary_key=True)
+    user_id = db.Column(db.Integer, db.ForeignKey('user.id'), nullable=False)
+    session_token = db.Column(db.String(64), unique=True, nullable=False)
+    ip_address = db.Column(db.String(45))  # IPv6 compatible
+    user_agent = db.Column(db.String(500))
+    device_info = db.Column(db.String(200))
+    is_active = db.Column(db.Boolean, default=True)
+    created_at = db.Column(db.DateTime, default=datetime.utcnow)
+    last_activity = db.Column(db.DateTime, default=datetime.utcnow)
+    expires_at = db.Column(db.DateTime)
+    
+    # Relationships
+    user = db.relationship('User', backref=db.backref('sessions', lazy=True))
+    
+    @staticmethod
+    def generate_token():
+        return secrets.token_urlsafe(32)
+    
+    def is_expired(self):
+        if self.expires_at:
+            return datetime.utcnow() > self.expires_at
+        return False
+    
+    def update_activity(self):
+        self.last_activity = datetime.utcnow()
+        db.session.commit()
 
 
 class Configuration(db.Model):

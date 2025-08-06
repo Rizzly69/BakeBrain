@@ -444,6 +444,60 @@ select.form-control {
     border: 1px solid var(--info);
 }
 
+/* Expiry warning styles */
+.expiry-info {
+    display: flex;
+    flex-direction: column;
+    gap: 2px;
+}
+
+.expiry-date {
+    font-weight: 600;
+    font-size: 14px;
+}
+
+.expiry-date.safe {
+    color: var(--success);
+}
+
+.expiry-date.expires_week {
+    color: var(--info);
+}
+
+.expiry-date.expires_soon {
+    color: var(--warning);
+}
+
+.expiry-date.expires_today {
+    color: var(--warning);
+    font-weight: bold;
+}
+
+.expiry-date.expired {
+    color: var(--danger);
+    font-weight: bold;
+}
+
+.expiry-warning {
+    color: var(--warning);
+    font-size: 11px;
+    font-weight: 500;
+}
+
+.expiry-warning.critical {
+    color: var(--danger);
+}
+
+/* Status badge for expiry */
+.status-badge.info {
+    background-color: var(--info);
+    color: white;
+    padding: 2px 8px;
+    border-radius: 12px;
+    font-size: 11px;
+    font-weight: 500;
+}
+
 /* Alerts */
 .alert {
     padding: 20px 24px;

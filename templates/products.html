@@ -106,6 +106,10 @@
                         <i data-feather="edit"></i>
                         Edit
                     </button>
+                    <a href="{{ url_for('manage_product_recipe', product_id=product.id) }}" class="btn btn-sm btn-info">
+                        <i data-feather="list"></i>
+                        Recipe
+                    </a>
                     {% endif %}
                     
                     {% if current_user.role.name in ['customer'] %}

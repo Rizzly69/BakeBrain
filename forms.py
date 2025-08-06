@@ -1,11 +1,59 @@
 from flask_wtf import FlaskForm
-from wtforms import StringField, PasswordField, SelectField, TextAreaField, IntegerField, DecimalField, DateTimeField, BooleanField, SubmitField, DateField
-from wtforms.validators import DataRequired, Email, Length, NumberRange, Optional
-from models import Role, Category, Product, OrderStatus, OrderType, RawProduct
+from wtforms import StringField, PasswordField, SelectField, TextAreaField, IntegerField, DecimalField, DateTimeField, BooleanField, SubmitField, DateField, TimeField, HiddenField
+from wtforms.validators import DataRequired, Email, Length, NumberRange, Optional, EqualTo, ValidationError
+from models import Role, Category, Product, OrderStatus, OrderType, RawProduct, User, Order, ProductRecipe
+from datetime import datetime, date
+import re
 
+
+class SignupForm(FlaskForm):
+    username = StringField('Username', validators=[DataRequired(), Length(min=3, max=64)])
+    email = StringField('Email', validators=[DataRequired(), Email()])
+    password = PasswordField('Password', validators=[DataRequired(), Length(min=8)])
+    confirm_password = PasswordField('Confirm Password', validators=[DataRequired(), EqualTo('password')])
+    first_name = StringField('First Name', validators=[DataRequired(), Length(max=64)])
+    last_name = StringField('Last Name', validators=[DataRequired(), Length(max=64)])
+    phone = StringField('Phone', validators=[Optional(), Length(max=20)])
+    submit = SubmitField('Sign Up')
+    
+    def validate_username(self, username):
+        user = User.query.filter_by(username=username.data).first()
+        if user:
+            raise ValidationError('Username already exists. Please choose a different one.')
+    
+    def validate_email(self, email):
+        user = User.query.filter_by(email=email.data).first()
+        if user:
+            raise ValidationError('Email already registered. Please use a different email or login.')
+
+class EmailVerificationForm(FlaskForm):
+    otp = StringField('Verification Code', validators=[DataRequired(), Length(min=6, max=6)])
+    submit = SubmitField('Verify Email')
+    
+    def validate_otp(self, otp):
+        if not otp.data.isdigit():
+            raise ValidationError('Verification code must contain only numbers.')
+
+class ResendOTPForm(FlaskForm):
+    email = StringField('Email', validators=[DataRequired(), Email()])
+    submit = SubmitField('Resend Verification Code')
+
+class ForgotPasswordForm(FlaskForm):
+    email = StringField('Email', validators=[DataRequired(), Email()])
+    submit = SubmitField('Send Reset Link')
+    
+    def validate_email(self, email):
+        user = User.query.filter_by(email=email.data).first()
+        if not user:
+            raise ValidationError('No account found with this email address.')
+
+class ResetPasswordForm(FlaskForm):
+    password = PasswordField('New Password', validators=[DataRequired(), Length(min=8)])
+    confirm_password = PasswordField('Confirm New Password', validators=[DataRequired(), EqualTo('password')])
+    submit = SubmitField('Reset Password')
 
 class LoginForm(FlaskForm):
-    username = StringField('Username', validators=[DataRequired(), Length(min=3, max=64)])
+    username = StringField('Username or Email', validators=[DataRequired()])
     password = PasswordField('Password', validators=[DataRequired()])
     remember_me = BooleanField('Remember Me')
     submit = SubmitField('Sign In')
@@ -157,15 +205,42 @@ class ConfigurationForm(FlaskForm):
     def __init__(self, config_item=None, *args, **kwargs):
         super(ConfigurationForm, self).__init__(*args, **kwargs)
         if config_item:
-            self.config_item = config_item
-            # Set field type based on data_type
-            if config_item.data_type == 'boolean':
-                self.value = BooleanField('Value')
-            elif config_item.data_type == 'integer':
-                self.value = IntegerField('Value', validators=[DataRequired(), NumberRange(min=0)])
-            elif config_item.data_type == 'float':
-                self.value = DecimalField('Value', validators=[DataRequired(), NumberRange(min=0)])
-            elif config_item.data_type == 'text':
-                self.value = TextAreaField('Value', validators=[DataRequired()])
+            self.value.data = config_item.value
+            self.description.data = config_item.description
+
+
+class ProductRecipeForm(FlaskForm):
+    raw_product_id = SelectField('Raw Material', validators=[DataRequired()], coerce=int)
+    quantity_required = DecimalField('Quantity Required', validators=[DataRequired(), NumberRange(min=0.001)])
+    unit_of_measure = SelectField('Unit of Measure', validators=[DataRequired()], 
+                                 choices=[
+                                     ('kg', 'Kilograms (kg)'),
+                                     ('g', 'Grams (g)'),
+                                     ('l', 'Liters (L)'),
+                                     ('ml', 'Milliliters (mL)'),
+                                     ('pieces', 'Pieces'),
+                                     ('units', 'Units'),
+                                     ('bags', 'Bags'),
+                                     ('boxes', 'Boxes'),
+                                     ('cans', 'Cans'),
+                                     ('bottles', 'Bottles')
+                                 ])
+    submit = SubmitField('Add to Recipe')
+    
+    def __init__(self, product_id=None, *args, **kwargs):
+        super(ProductRecipeForm, self).__init__(*args, **kwargs)
+        try:
+            from models import RawProduct, ProductRecipe
+            # Get all raw products that are not already in this product's recipe
+            if product_id:
+                existing_recipe_raw_ids = [r.raw_product_id for r in ProductRecipe.query.filter_by(product_id=product_id).all()]
+                raw_products = RawProduct.query.filter(
+                    RawProduct.is_active == True,
+                    ~RawProduct.id.in_(existing_recipe_raw_ids)
+                ).all()
             else:
-                self.value = StringField('Value', validators=[DataRequired()])
+                raw_products = RawProduct.query.filter_by(is_active=True).all()
+            
+            self.raw_product_id.choices = [(rp.id, f"{rp.name} ({rp.unit_of_measure})") for rp in raw_products]
+        except Exception as e:
+            self.raw_product_id.choices = []

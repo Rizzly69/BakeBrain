@@ -319,43 +319,179 @@ function updateSalesChart(period) {
 }
 
 function exportReports() {
-    showNotification('Exporting reports...', 'info');
-    // This would generate and download a comprehensive report
+    const period = document.getElementById('salesPeriodSelect').value;
+    window.location.href = `/download/sales-summary?period=${period}`;
 }
 
 function downloadSalesReport() {
-    showNotification('Downloading sales report...', 'info');
-    // This would download a detailed sales report
+    const period = document.getElementById('salesPeriodSelect').value;
+    window.location.href = `/download/daily-report?period=${period}`;
 }
 
 function downloadInventoryReport() {
-    showNotification('Downloading inventory report...', 'info');
-    // This would download a detailed inventory report
+    window.location.href = `/download/inventory-report`;
 }
 
 function implementInsight(insightId) {
-    showNotification(`Implementing insight ID: ${insightId}`, 'success');
-    // This would implement the AI recommendation
+    fetch(`/api/ai-insights/${insightId}/implement`, {
+        method: 'POST',
+        headers: {
+            'Content-Type': 'application/json',
+        }
+    })
+    .then(response => response.json())
+    .then(data => {
+        if (data.success) {
+            showNotification(data.message, 'success');
+        } else {
+            showNotification(data.message || 'Error implementing insight', 'error');
+        }
+    })
+    .catch(error => {
+        showNotification('Error implementing insight', 'error');
+    });
 }
 
 function dismissInsight(insightId) {
-    showNotification(`Dismissed insight ID: ${insightId}`, 'info');
-    // This would dismiss the AI insight
+    fetch(`/api/ai-insights/${insightId}/dismiss`, {
+        method: 'POST',
+        headers: {
+            'Content-Type': 'application/json',
+        }
+    })
+    .then(response => response.json())
+    .then(data => {
+        if (data.success) {
+            showNotification('Insight dismissed successfully', 'success');
+            // Remove the insight from the UI
+            const insightElement = document.querySelector(`[data-insight-id="${insightId}"]`);
+            if (insightElement) {
+                insightElement.remove();
+            }
+        } else {
+            showNotification(data.message || 'Error dismissing insight', 'error');
+        }
+    })
+    .catch(error => {
+        showNotification('Error dismissing insight', 'error');
+    });
 }
 
 function showCustomerAnalytics() {
-    showNotification('Loading customer analytics...', 'info');
-    // This would load detailed customer analytics
+    fetch('/api/analytics/customers')
+        .then(response => response.json())
+        .then(data => {
+            // Update customer analytics section
+            const container = document.getElementById('customerAnalytics');
+            if (container) {
+                container.innerHTML = `
+                    <div class="analytics-grid">
+                        <div class="analytics-card">
+                            <h4>Top Customers</h4>
+                            <div class="customer-list">
+                                ${data.top_customers.map(customer => `
+                                    <div class="customer-item">
+                                        <span>${customer.name}</span>
+                                        <span>$${customer.total_spent}</span>
+                                    </div>
+                                `).join('')}
+                            </div>
+                        </div>
+                        <div class="analytics-card">
+                            <h4>Customer Retention</h4>
+                            <div class="retention-stats">
+                                <div class="stat">
+                                    <span class="stat-value">${data.retention_rate}%</span>
+                                    <span class="stat-label">Retention Rate</span>
+                                </div>
+                            </div>
+                        </div>
+                    </div>
+                `;
+            }
+            showNotification('Customer analytics loaded', 'success');
+        })
+        .catch(error => {
+            showNotification('Error loading customer analytics', 'error');
+        });
 }
 
 function showProductAnalytics() {
-    showNotification('Loading product performance analytics...', 'info');
-    // This would load detailed product analytics
+    fetch('/api/analytics/products')
+        .then(response => response.json())
+        .then(data => {
+            // Update product analytics section
+            const container = document.getElementById('productAnalytics');
+            if (container) {
+                container.innerHTML = `
+                    <div class="analytics-grid">
+                        <div class="analytics-card">
+                            <h4>Top Products</h4>
+                            <div class="product-list">
+                                ${data.top_products.map(product => `
+                                    <div class="product-item">
+                                        <span>${product.name}</span>
+                                        <span>${product.sales_count} sold</span>
+                                    </div>
+                                `).join('')}
+                            </div>
+                        </div>
+                        <div class="analytics-card">
+                            <h4>Product Performance</h4>
+                            <div class="performance-stats">
+                                <div class="stat">
+                                    <span class="stat-value">$${data.total_revenue}</span>
+                                    <span class="stat-label">Total Revenue</span>
+                                </div>
+                            </div>
+                        </div>
+                    </div>
+                `;
+            }
+            showNotification('Product analytics loaded', 'success');
+        })
+        .catch(error => {
+            showNotification('Error loading product analytics', 'error');
+        });
 }
 
 function showPredictiveAnalytics() {
-    showNotification('Loading predictive insights...', 'info');
-    // This would load AI-powered predictive analytics
+    fetch('/api/analytics/predictive')
+        .then(response => response.json())
+        .then(data => {
+            // Update predictive analytics section
+            const container = document.getElementById('predictiveAnalytics');
+            if (container) {
+                container.innerHTML = `
+                    <div class="analytics-grid">
+                        <div class="analytics-card">
+                            <h4>Demand Forecast</h4>
+                            <div class="forecast-list">
+                                ${data.demand_forecast.map(item => `
+                                    <div class="forecast-item">
+                                        <span>${item.product}</span>
+                                        <span>${item.predicted_demand} units</span>
+                                    </div>
+                                `).join('')}
+                            </div>
+                        </div>
+                        <div class="analytics-card">
+                            <h4>Trend Analysis</h4>
+                            <div class="trend-stats">
+                                <div class="stat">
+                                    <span class="stat-value">${data.trend_direction}</span>
+                                    <span class="stat-label">Sales Trend</span>
+                                </div>
+                            </div>
+                        </div>
+                    </div>
+                `;
+            }
+            showNotification('Predictive analytics loaded', 'success');
+        })
+        .catch(error => {
+            showNotification('Error loading predictive analytics', 'error');
+        });
 }
 
 // Dynamic chart update logic

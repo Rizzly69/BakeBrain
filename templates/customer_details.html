@@ -1,0 +1,210 @@
+{% extends "base.html" %}
+
+{% block title %}Customer Details - {{ customer.first_name }} {{ customer.last_name }}{% endblock %}
+
+{% block content %}
+<div class="container-fluid">
+    <div class="page-header">
+        <h1>Customer Details</h1>
+        <div class="header-actions">
+            <a href="{{ url_for('customers') }}" class="btn btn-secondary">Back to Customers</a>
+            <a href="{{ url_for('edit_customer', customer_id=customer.id) }}" class="btn btn-primary">Edit Customer</a>
+        </div>
+    </div>
+
+    <div class="row">
+        <div class="col-md-6">
+            <div class="card">
+                <div class="card-header">
+                    <h3 class="card-title">Customer Information</h3>
+                </div>
+                <div class="card-body">
+                    <div class="customer-info">
+                        <div class="info-row">
+                            <strong>Name:</strong> {{ customer.first_name }} {{ customer.last_name }}
+                        </div>
+                        <div class="info-row">
+                            <strong>Email:</strong> {{ customer.email }}
+                        </div>
+                        <div class="info-row">
+                            <strong>Phone:</strong> {{ customer.phone or 'Not provided' }}
+                        </div>
+                        <div class="info-row">
+                            <strong>Username:</strong> {{ customer.username }}
+                        </div>
+                        <div class="info-row">
+                            <strong>Status:</strong> 
+                            <span class="badge badge-{{ 'success' if customer.active else 'danger' }}">
+                                {{ 'Active' if customer.active else 'Inactive' }}
+                            </span>
+                        </div>
+                        <div class="info-row">
+                            <strong>Member Since:</strong> {{ customer.created_at.strftime('%B %d, %Y') }}
+                        </div>
+                        {% if customer.last_login %}
+                        <div class="info-row">
+                            <strong>Last Login:</strong> {{ customer.last_login.strftime('%B %d, %Y at %I:%M %p') }}
+                        </div>
+                        {% endif %}
+                    </div>
+                </div>
+            </div>
+        </div>
+
+        <div class="col-md-6">
+            <div class="card">
+                <div class="card-header">
+                    <h3 class="card-title">Order Statistics</h3>
+                </div>
+                <div class="card-body">
+                    <div class="stats-grid">
+                        <div class="stat-card">
+                            <div class="stat-value">{{ orders|length }}</div>
+                            <div class="stat-label">Total Orders</div>
+                        </div>
+                        <div class="stat-card">
+                            <div class="stat-value">${{ "%.2f"|format(orders|selectattr('status', 'ne', 'CANCELLED')|sum(attribute='total_amount')) }}</div>
+                            <div class="stat-label">Total Spent</div>
+                        </div>
+                        <div class="stat-card">
+                            <div class="stat-value">{{ orders|selectattr('status', 'equalto', 'DELIVERED')|list|length }}</div>
+                            <div class="stat-label">Completed Orders</div>
+                        </div>
+                        <div class="stat-card">
+                            <div class="stat-value">{{ orders|selectattr('status', 'equalto', 'PENDING')|list|length }}</div>
+                            <div class="stat-label">Pending Orders</div>
+                        </div>
+                    </div>
+                </div>
+            </div>
+        </div>
+    </div>
+
+    {% if orders %}
+    <div class="card">
+        <div class="card-header">
+            <h3 class="card-title">Order History</h3>
+        </div>
+        <div class="table-container">
+            <table class="table">
+                <thead>
+                    <tr>
+                        <th>Order #</th>
+                        <th>Date</th>
+                        <th>Type</th>
+                        <th>Status</th>
+                        <th>Total</th>
+                        <th>Actions</th>
+                    </tr>
+                </thead>
+                <tbody>
+                    {% for order in orders %}
+                    <tr>
+                        <td>{{ order.order_number }}</td>
+                        <td>{{ order.created_at.strftime('%m/%d/%Y %I:%M %p') }}</td>
+                        <td>
+                            <span class="badge badge-info">{{ order.order_type.value.title() }}</span>
+                        </td>
+                        <td>
+                            <span class="badge badge-{{ 'success' if order.status.value == 'DELIVERED' else 'danger' if order.status.value == 'CANCELLED' else 'warning' if order.status.value == 'PENDING' else 'info' }}">
+                                {{ order.status.value.replace('_', ' ').title() }}
+                            </span>
+                        </td>
+                        <td>${{ "%.2f"|format(order.total_amount) }}</td>
+                        <td>
+                            <button class="btn btn-sm btn-outline-primary" onclick="viewOrderDetails({{ order.id }})">
+                                View Details
+                            </button>
+                        </td>
+                    </tr>
+                    {% endfor %}
+                </tbody>
+            </table>
+        </div>
+    </div>
+    {% else %}
+    <div class="card">
+        <div class="card-body text-center">
+            <p class="text-muted">No orders found for this customer.</p>
+        </div>
+    </div>
+    {% endif %}
+</div>
+
+<!-- Order Details Modal -->
+<div class="modal fade" id="orderDetailsModal" tabindex="-1">
+    <div class="modal-dialog modal-lg">
+        <div class="modal-content">
+            <div class="modal-header">
+                <h5 class="modal-title">Order Details</h5>
+                <button type="button" class="btn-close" data-bs-dismiss="modal"></button>
+            </div>
+            <div class="modal-body" id="orderDetailsContent">
+                <!-- Content will be loaded here -->
+            </div>
+        </div>
+    </div>
+</div>
+
+<script>
+function viewOrderDetails(orderId) {
+    fetch(`/api/order/${orderId}/details`)
+        .then(response => response.json())
+        .then(data => {
+            document.getElementById('orderDetailsContent').innerHTML = data.html;
+            new bootstrap.Modal(document.getElementById('orderDetailsModal')).show();
+        })
+        .catch(error => {
+            console.error('Error loading order details:', error);
+            alert('Error loading order details');
+        });
+}
+</script>
+
+<style>
+.customer-info .info-row {
+    margin-bottom: 15px;
+    padding: 10px 0;
+    border-bottom: 1px solid var(--bg-tertiary);
+}
+
+.customer-info .info-row:last-child {
+    border-bottom: none;
+}
+
+.customer-info .info-row strong {
+    display: inline-block;
+    width: 120px;
+    color: var(--text-secondary);
+}
+
+.stats-grid {
+    display: grid;
+    grid-template-columns: repeat(auto-fit, minmax(120px, 1fr));
+    gap: 15px;
+    margin-top: 15px;
+}
+
+.stat-card {
+    text-align: center;
+    padding: 15px;
+    background: var(--bg-secondary);
+    border-radius: 8px;
+    border: 1px solid var(--bg-tertiary);
+}
+
+.stat-value {
+    font-size: 24px;
+    font-weight: bold;
+    color: var(--text-primary);
+    margin-bottom: 5px;
+}
+
+.stat-label {
+    font-size: 12px;
+    color: var(--text-secondary);
+    text-transform: uppercase;
+    letter-spacing: 0.5px;
+}
+</style>
+{% endblock %} 

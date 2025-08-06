@@ -65,6 +65,81 @@
     </div>
     {% endif %}
 
+    <!-- Recipe-Based Inventory -->
+    <div class="card mb-4">
+        <div class="card-header">
+            <h3 class="card-title">
+                <i data-feather="list"></i>
+                Recipe-Based Inventory Analysis
+            </h3>
+        </div>
+        <div class="card-body">
+            <div class="table-responsive">
+                <table class="table table-hover">
+                    <thead>
+                        <tr>
+                            <th>Product</th>
+                            <th>Current Inventory</th>
+                            <th>Max from Raw Materials</th>
+                            <th>Total Available</th>
+                            <th>Recipe Status</th>
+                            <th>Actions</th>
+                        </tr>
+                    </thead>
+                    <tbody>
+                        {% for product in products %}
+                        <tr>
+                            <td>
+                                <strong>{{ product.name }}</strong>
+                                <br>
+                                <small class="text-muted">{{ product.category.name }}</small>
+                            </td>
+                            <td>
+                                {% if product.inventory %}
+                                    <span class="stock-amount {{ 'low-stock' if product.inventory.is_low_stock() else 'in-stock' }}">
+                                        {{ product.inventory.quantity }} units
+                                    </span>
+                                {% else %}
+                                    <span class="text-muted">No inventory</span>
+                                {% endif %}
+                            </td>
+                            <td>
+                                {% if product.recipes %}
+                                    {% set max_from_raw = product.get_max_orderable_quantity() - (product.inventory.quantity if product.inventory else 0) %}
+                                    {% if max_from_raw > 0 %}
+                                        <span class="text-success">{{ max_from_raw }} units</span>
+                                    {% else %}
+                                        <span class="text-muted">0 units</span>
+                                    {% endif %}
+                                {% else %}
+                                    <span class="text-muted">No recipe</span>
+                                {% endif %}
+                            </td>
+                            <td>
+                                <span class="stock-amount {{ 'low-stock' if product.get_max_orderable_quantity() < 10 else 'in-stock' }}">
+                                    {{ product.get_max_orderable_quantity() }} units
+                                </span>
+                            </td>
+                            <td>
+                                {% if product.recipes %}
+                                    <span class="badge bg-success">{{ product.recipes|length }} ingredients</span>
+                                {% else %}
+                                    <span class="badge bg-secondary">No recipe</span>
+                                {% endif %}
+                            </td>
+                            <td>
+                                <a href="{{ url_for('manage_product_recipe', product_id=product.id) }}" class="btn btn-sm btn-outline-primary">
+                                    <i data-feather="list"></i> Recipe
+                                </a>
+                            </td>
+                        </tr>
+                        {% endfor %}
+                    </tbody>
+                </table>
+            </div>
+        </div>
+    </div>
+
     <!-- Low Stock Alerts -->
     {% if low_stock_items or low_stock_ingredients %}
     <div class="card" style="border: 1px solid var(--warning); box-shadow: 0 0 15px rgba(255, 170, 0, 0.3);">

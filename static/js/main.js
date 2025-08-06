@@ -358,12 +358,12 @@ function updateOrderStatus(orderId, newStatus) {
 
 function getStatusClass(status) {
     const statusClasses = {
-        'pending': 'warning',
-        'confirmed': 'info',
-        'in_preparation': 'info',
-        'ready': 'success',
-        'delivered': 'success',
-        'cancelled': 'danger'
+        'PENDING': 'warning',
+        'CONFIRMED': 'info',
+        'IN_PREPARATION': 'info',
+        'READY': 'success',
+        'DELIVERED': 'success',
+        'CANCELLED': 'danger'
     };
     
     return statusClasses[status] || 'info';

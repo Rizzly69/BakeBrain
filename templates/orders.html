@@ -30,12 +30,12 @@
                 <label class="form-label">Status</label>
                 <select name="status" class="form-control">
                     <option value="">All Statuses</option>
-                    <option value="pending" {{ 'selected' if status_filter == 'pending' }}>Pending</option>
-                    <option value="confirmed" {{ 'selected' if status_filter == 'confirmed' }}>Confirmed</option>
-                    <option value="in_preparation" {{ 'selected' if status_filter == 'in_preparation' }}>In Preparation</option>
-                    <option value="ready" {{ 'selected' if status_filter == 'ready' }}>Ready</option>
-                    <option value="delivered" {{ 'selected' if status_filter == 'delivered' }}>Delivered</option>
-                    <option value="cancelled" {{ 'selected' if status_filter == 'cancelled' }}>Cancelled</option>
+                                    <option value="PENDING" {{ 'selected' if status_filter == 'PENDING' }}>Pending</option>
+                <option value="CONFIRMED" {{ 'selected' if status_filter == 'CONFIRMED' }}>Confirmed</option>
+                <option value="IN_PREPARATION" {{ 'selected' if status_filter == 'IN_PREPARATION' }}>In Preparation</option>
+                <option value="READY" {{ 'selected' if status_filter == 'READY' }}>Ready</option>
+                <option value="DELIVERED" {{ 'selected' if status_filter == 'DELIVERED' }}>Delivered</option>
+                <option value="CANCELLED" {{ 'selected' if status_filter == 'CANCELLED' }}>Cancelled</option>
                 </select>
             </div>
             
@@ -65,8 +65,8 @@
             <div style="display: flex; gap: 10px;">
                 <span class="badge badge-info">{{ orders.total }} Total Orders</span>
                 {% if orders.items %}
-                <span class="badge badge-success">{{ orders.items|selectattr('status.value', 'eq', 'delivered')|list|length }} Delivered</span>
-                <span class="badge badge-warning">{{ orders.items|selectattr('status.value', 'eq', 'pending')|list|length }} Pending</span>
+                                        <span class="badge badge-success">{{ orders.items|selectattr('status.value', 'eq', 'DELIVERED')|list|length }} Delivered</span>
+                        <span class="badge badge-warning">{{ orders.items|selectattr('status.value', 'eq', 'PENDING')|list|length }} Pending</span>
                 {% endif %}
             </div>
         </div>
@@ -130,7 +130,7 @@
                             {% endif %}
                         </td>
                         <td>
-                            <span class="status-badge badge badge-{{ 'success' if order.status.value == 'delivered' else 'danger' if order.status.value == 'cancelled' else 'warning' if order.status.value == 'pending' else 'info' }}">
+                            <span class="status-badge badge badge-{{ 'success' if order.status.value == 'DELIVERED' else 'danger' if order.status.value == 'CANCELLED' else 'warning' if order.status.value == 'PENDING' else 'info' }}">
                                 {{ order.status.value.replace('_', ' ').title() }}
                             </span>
                         </td>
@@ -159,7 +159,7 @@
                                 </a>
                                 {% endif %}
                                 
-                                {% if current_user.role.name in ['admin', 'manager', 'staff'] and order.status.value not in ['delivered', 'cancelled'] %}
+                                {% if current_user.role.name in ['admin', 'manager', 'staff'] and order.status.value not in ['DELIVERED', 'CANCELLED'] %}
                                 <div class="dropdown" style="position: relative;">
                                     <button class="btn btn-primary" style="font-size: 12px; padding: 4px 8px;"
                                             onclick="toggleStatusDropdown({{ order.id }})"
@@ -170,32 +170,32 @@
                                          style="display: none; position: absolute; top: 100%; right: 0; background: var(--bg-card); 
                                                 border: 1px solid var(--bg-tertiary); border-radius: 8px; padding: 10px; 
                                                 box-shadow: var(--shadow-dark); z-index: 1000; min-width: 150px;">
-                                        {% if order.status.value == 'pending' %}
+                                        {% if order.status.value == 'PENDING' %}
                                         <button class="btn btn-success" style="width: 100%; margin-bottom: 5px; font-size: 12px;"
-                                                onclick="updateOrderStatus({{ order.id }}, 'confirmed')">
+                                                onclick="updateOrderStatus({{ order.id }}, 'CONFIRMED')">
                                             Confirm Order
                                         </button>
                                         {% endif %}
-                                        {% if order.status.value == 'confirmed' %}
+                                        {% if order.status.value == 'CONFIRMED' %}
                                         <button class="btn btn-warning" style="width: 100%; margin-bottom: 5px; font-size: 12px;"
-                                                onclick="updateOrderStatus({{ order.id }}, 'in_preparation')">
+                                                onclick="updateOrderStatus({{ order.id }}, 'IN_PREPARATION')">
                                             Start Preparation
                                         </button>
                                         {% endif %}
-                                        {% if order.status.value == 'in_preparation' %}
+                                        {% if order.status.value == 'IN_PREPARATION' %}
                                         <button class="btn btn-success" style="width: 100%; margin-bottom: 5px; font-size: 12px;"
-                                                onclick="updateOrderStatus({{ order.id }}, 'ready')">
+                                                onclick="updateOrderStatus({{ order.id }}, 'READY')">
                                             Mark Ready
                                         </button>
                                         {% endif %}
-                                        {% if order.status.value == 'ready' %}
+                                        {% if order.status.value == 'READY' %}
                                         <button class="btn btn-success" style="width: 100%; margin-bottom: 5px; font-size: 12px;"
-                                                onclick="updateOrderStatus({{ order.id }}, 'delivered')">
+                                                onclick="updateOrderStatus({{ order.id }}, 'DELIVERED')">
                                             Mark Delivered
                                         </button>
                                         {% endif %}
                                         <button class="btn btn-danger" style="width: 100%; font-size: 12px;"
-                                                onclick="updateOrderStatus({{ order.id }}, 'cancelled')">
+                                                onclick="updateOrderStatus({{ order.id }}, 'CANCELLED')">
                                             Cancel Order
                                         </button>
                                     </div>
